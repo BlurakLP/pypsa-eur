@@ -169,7 +169,7 @@ solving:
     name: highs
     options: highs-simplex 
   
-  mem_mb: 8000                      # Memory limit
+  #mem_mb: 8000                      # Memory limit
   #runtime: 48h                        # Time limit
 
 
