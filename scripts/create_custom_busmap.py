@@ -4,12 +4,12 @@ this script aggregates all buses per country except germany (DE)
 
 Outputs
 -------
-
+busmap_base_s_{cluster}.csv
 
 Description
 -----------
+version 1.0.0
 
-[description]
 """
 
 import logging
@@ -66,7 +66,7 @@ if __name__ == "__main__":
     DE_buses_share_new = round(nbr_DE_buses_new / bus_ids_new, 2) * 100
 
     # export to csv
-    busmap_new.to_csv(snakemake.output.busmap,index=False)
+    busmap_new.to_csv(snakemake.output.custom_busmap,index=False)
 
     logger.info(
         f"Simplified network:\n"
