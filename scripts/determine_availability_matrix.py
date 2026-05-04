@@ -162,6 +162,7 @@ if __name__ == "__main__":
     start = time.time()
 
     kwargs = dict(nprocesses=nprocesses, disable_progressbar=noprogress)
+
     availability = cutout.availabilitymatrix(regions, excluder, **kwargs)
 
     duration = time.time() - start
