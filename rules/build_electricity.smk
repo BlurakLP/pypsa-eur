@@ -127,30 +127,30 @@ rule build_osm_boundaries:
     script:
         scripts("build_osm_boundaries.py")
 
-
-rule build_bidding_zones:
-    input:
-        bidding_zones_entsoepy=f"{BIDDING_ZONES_ENTSOEPY_DATASET['folder']}/bidding_zones_entsoepy.geojson",
-        bidding_zones_electricitymaps=f"{BIDDING_ZONES_ELECTRICITYMAPS_DATASET['folder']}/bidding_zones_electricitymaps.geojson",
-    output:
-        file=resources("bidding_zones.geojson"),
-    log:
-        logs("build_bidding_zones.log"),
-    threads: 1
-    resources:
-        mem_mb=1500,
-    params:
-        countries=config_provider("countries"),
-        remove_islands=config_provider(
-            "clustering", "build_bidding_zones", "remove_islands"
-        ),
-        aggregate_to_tyndp=config_provider(
-            "clustering", "build_bidding_zones", "aggregate_to_tyndp"
-        ),
-    message:
-        "Building bidding zones"
-    script:
-        scripts("build_bidding_zones.py")
+if not config_provider("scenario", "bz_config"):
+    rule build_bidding_zones:
+        input:
+            bidding_zones_entsoepy=f"{BIDDING_ZONES_ENTSOEPY_DATASET['folder']}/bidding_zones_entsoepy.geojson",
+            bidding_zones_electricitymaps=f"{BIDDING_ZONES_ELECTRICITYMAPS_DATASET['folder']}/bidding_zones_electricitymaps.geojson",
+        output:
+            file=resources("bidding_zones.geojson"),
+        log:
+            logs("build_bidding_zones.log"),
+        threads: 1
+        resources:
+            mem_mb=1500,
+        params:
+            countries=config_provider("countries"),
+            remove_islands=config_provider(
+                "clustering", "build_bidding_zones", "remove_islands"
+            ),
+            aggregate_to_tyndp=config_provider(
+                "clustering", "build_bidding_zones", "aggregate_to_tyndp"
+            ),
+        message:
+            "Building bidding zones"
+        script:
+            scripts("build_bidding_zones.py")
 
 
 rule build_shapes:

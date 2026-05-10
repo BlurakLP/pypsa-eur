@@ -58,6 +58,7 @@ wildcard_constraints:
     opts=r"[-+a-zA-Z0-9\.]*",
     sector_opts=r"[-+a-zA-Z0-9\.\s]*",
     planning_horizons=r"[0-9]{4}",
+    bz_config=r"DE[0-9]{2}",
 
 
 include: "rules/common.smk"
@@ -70,11 +71,10 @@ OSM_DATASET = dataset_version("osm")
 include: "rules/collect.smk"
 include: "rules/retrieve.smk"
 include: "rules/build_electricity.smk"
-include: "rules/build_sector.smk"
+if not config["multimodel"]: include: "rules/build_sector.smk"
 include: "rules/solve_electricity.smk"
 include: "rules/postprocess.smk"
 include: "rules/development.smk"
-include: "rules/solve_multimodel_myopic.smk"
 
 
 if config["foresight"] == "overnight":
@@ -84,7 +84,10 @@ if config["foresight"] == "overnight":
 
 if config["foresight"] == "myopic":
 
-    include: "rules/solve_myopic.smk"
+    if config["multimodel"]:
+        include: "rules/solve_multimodel_myopic.smk"
+    else:
+        include: "rules/solve_myopic.smk"
 
 
 if config["foresight"] == "perfect":
