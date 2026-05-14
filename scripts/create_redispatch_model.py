@@ -1,5 +1,5 @@
 """
-Transfer dispatch from a solved network to a prepared but unsolved network
+Transfer capacity and dispatch from a solved network to a prepared but unsolved network
 
 Outputs
 -------
@@ -8,7 +8,7 @@ Outputs
 Description
 -----------
 
-This script is based on the official redispatch example:
+This script is partially based on the official redispatch example:
 https://docs.pypsa.org/latest/examples/scigrid-redispatch/#load-example-network
 """
 
@@ -62,6 +62,42 @@ def add_redispatch_capacity(net_in, net_out):
     return net_out
 
 
+def transfer_capacity(network_MM_solved, network_template_RM):
+
+    RM_net = network_template_RM.copy()
+
+    # generators: copy from solved MM and adjust parameters
+    RM_net.generators = network_MM_solved.generators.copy()
+    RM_net.generators.loc[:,"p_nom_extendable"] = False
+
+    # stores: copy from solved MM and adjust parameters
+    RM_net.stores = network_MM_solved.stores.copy()
+    RM_net.stores.loc[:,"p_nom_extendable"] = False
+
+    # storage_units: copy from solved MM and adjust parameters
+    RM_net.storage_units = network_MM_solved.storage_units.copy()
+    RM_net.storage_units.loc[:,"p_nom_extendable"] = False
+
+    # for generators, stores and storage_units: get the bus allocation from before the market model
+    for idx in RM_net.generators.index:
+        RM_net.generators.loc[idx,"bus"] = network_template_RM.generators.loc[idx,"bus"]
+
+    for idx in RM_net.stores.index:
+        RM_net.stores.loc[idx,"bus"] = network_template_RM.stores.loc[idx,"bus"]
+
+    for idx in RM_net.storage_units.index:
+        RM_net.storage_units.loc[idx,"bus"] = network_template_RM.storage_units.loc[idx,"bus"]
+
+    # for lines and links: transfer the extendability from before the market model
+    for idx in RM_net.links.index:
+        RM_net.links.loc[idx,"p_nom_extendable"] = network_template_RM.links.loc[idx,"p_nom_extendable"]
+
+    for idx in RM_net.lines.index:
+        RM_net.lines.loc[idx,"p_nom_extendable"] = network_template_RM.lines.loc[idx,"p_nom_extendable"]
+
+    return RM_net
+
+
 if __name__ == "__main__":
     if "snakemake" not in globals():
         from scripts._helpers import mock_snakemake
@@ -78,8 +114,10 @@ if __name__ == "__main__":
     # get the unsolved but prepared network of the redispatch model
     RM_net = pypsa.Network(snakemake.input.RM_network)
 
+    # transfer the capacity and set extendability
+    RM_net_with_capacity = transfer_capacity(MM_net, RM_net)
     # add the dispatch to the network
-    RM_net_with_dispatch = add_dispatch(MM_net, RM_net)
+    RM_net_with_dispatch = add_dispatch(MM_net, RM_net_with_capacity)
     # add redispatch capacities
     RM_net_prepared = add_redispatch_capacity(MM_net, RM_net_with_dispatch)
 

@@ -100,8 +100,7 @@ if __name__ == "__main__":
     params = snakemake.params
 
     # load network 
-    RM_net = pypsa.Network(snakemake.input.network)
-    MM_net = RM_net.copy()
+    MM_net = pypsa.Network(snakemake.input.network)
 
     # load mapping
     mapping = pd.read_csv(snakemake.input.mapping, index_col=0)
@@ -123,9 +122,12 @@ if __name__ == "__main__":
     # stores doesn't have to be transfered because they are attached to the battery buses (and these are already transfered)
     # sub_networks doesn't have to be transfered, because there are none in DE
 
-    RM_net.export_to_netcdf(snakemake.output.RM_network)
+    # set the extendability of lines/links correctly
+    MM_net.lines.loc[:,"p_nom_extendable"] = False
+    MM_net.links.loc[:,"p_nom_extendable"] = False
+
     MM_net.export_to_netcdf(snakemake.output.MM_network)
 
     logger.info(
-        f"Derived market and redispatch model network from the previous network and the bz-bus mapping\n"
+        f"Derive market model network from the prepared brownfield network and the bz-bus mapping\n"
     )

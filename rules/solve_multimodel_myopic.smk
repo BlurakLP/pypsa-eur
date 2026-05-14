@@ -23,16 +23,19 @@ def input_profile_tech_brownfield(w):
     }
 
 
-def solved_previous_horizon_RM(w):
+def solved_previous_horizon_multimodel(w):
     planning_horizons = config_provider("scenario", "planning_horizons")(w)
     i = planning_horizons.index(int(w.planning_horizons))
+
     planning_horizon_p = str(planning_horizons[i - 1])
+    model_out = "RM"
 
     return (
         RESULTS
         + "networks/base_s_{clusters}_elec_{opts}_"
         + planning_horizon_p
-        + "_RM"
+        + "_"
+        + model_out
         + ".nc"
     )
 
@@ -95,7 +98,7 @@ rule add_existing_baseyear_multimodel:
         powerplants=resources("powerplants_s_{clusters}.csv"),
         costs=lambda w: resources(f"costs_{config_provider('scenario', 'planning_horizons',0)(w)}_processed.csv"),
     output:
-        resources("networks/base_s_{clusters}_elec_{opts}_{planning_horizons}_brownfield.nc"),
+        resources("networks/base_s_{clusters}_elec_{opts}_{planning_horizons}_MM_brownfield.nc"),
     log:
         logs("add_existing_baseyear_base_s_{clusters}_{opts}_{planning_horizons}.log"),
     benchmark:
@@ -125,9 +128,9 @@ rule add_brownfield_multimodel:
     input:
         unpack(input_profile_tech_brownfield),
         network=resources("networks/base_s_{clusters}_elec_{opts}_{planning_horizons}.nc"),
-        network_p=solved_previous_horizon_RM,  #solved RM network at previous time step
+        network_p=solved_previous_horizon_multimodel,  #solved RM/MM network at previous time step
     output:
-        resources("networks/base_s_{clusters}_elec_{opts}_{planning_horizons}_brownfield.nc"),
+        resources("networks/base_s_{clusters}_elec_{opts}_{planning_horizons}_MM_brownfield.nc"),
     log:
         logs("add_brownfield_base_s_{clusters}_{opts}_{planning_horizons}.log"),
     benchmark:
@@ -144,13 +147,12 @@ rule add_brownfield_multimodel:
 
 
 
-rule create_multimodels:
+rule create_market_model:
     input:
-        network=resources("networks/base_s_{clusters}_elec_{opts}_{planning_horizons}_brownfield.nc"),
+        network=resources("networks/base_s_{clusters}_elec_{opts}_{planning_horizons}_MM_brownfield.nc"),
         mapping=resources(f"{BZ_CONFIG}_bz_bus_mapping_{{clusters}}.csv"),
         bz_shapes=resources("bidding_zones.geojson"),
     output:
-        RM_network=resources("networks/base_s_{clusters}_elec_{opts}_{planning_horizons}_RM_wo-dispatch.nc"),
         MM_network=resources("networks/base_s_{clusters}_elec_{opts}_{planning_horizons}_MM_unsolved.nc"),
     log:
         logs("create_RM_and_MM_{clusters}_{opts}_{planning_horizons}"),
@@ -161,7 +163,7 @@ rule create_multimodels:
     message:
         "Aggregating the network of the redispatch model to the network of the market model"
     script:
-        scripts("create_multimodels.py")
+        scripts("create_market_model.py")
 
 
 
@@ -194,20 +196,20 @@ rule solve_network_multimodel:
 
 
 
-rule transfer_dispatch:
+rule create_redispatch_model:
     input:
         MM_network=(RESULTS + "networks/base_s_{clusters}_elec_{opts}_{planning_horizons}_MM.nc"),
-        RM_network=resources("networks/base_s_{clusters}_elec_{opts}_{planning_horizons}_RM_wo-dispatch.nc"),
+        RM_network=resources("networks/base_s_{clusters}_elec_{opts}_{planning_horizons}_MM_brownfield.nc"),
     output:
         network=resources("networks/base_s_{clusters}_elec_{opts}_{planning_horizons}_RM_unsolved.nc"),
     log:
-        logs("transfer_dispatch_{clusters}_{opts}_{planning_horizons}"),
+        logs("create_redispatch_model_{clusters}_{opts}_{planning_horizons}"),
     benchmark:
-        benchmarks("transfer_dispatch_{clusters}_{opts}_{planning_horizons}")
+        benchmarks("create_redispatch_model_{clusters}_{opts}_{planning_horizons}")
     message:
-        "Transfering the dispatch from the solved market model to the unsolved redispatch model"
+        "Transfering the capacity and dispatch from the solved market model to the unsolved redispatch model. Also setting the extendability correctly for RM."
     script:
-        scripts("transfer_dispatch.py")
+        scripts("create_redispatch_model.py")
 
 
 
