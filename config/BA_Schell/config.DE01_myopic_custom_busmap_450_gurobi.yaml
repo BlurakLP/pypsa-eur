@@ -53,7 +53,31 @@ snapshots:
   end: "2014-01-01"
   inclusive: 'left'
 
-
+sector:
+  central_heat_vent: false
+  solid_biomass_import:
+    enable: false
+  district_heating:
+    ates:
+      enable: false
+    ptes:
+      supplemental_heating:
+        enable: false
+  heat_pump_sources:
+  hydrogen_turbine: false
+  regional_oil_demand: false
+  regional_co2_sequestration_potential:
+    enable: false
+  co2_spatial: false
+  co2_network: false
+  methanol:
+    methanol_to_power:
+      ocgt: false
+    biomass_to_methanol: false
+  ammonia: false
+  biomass_spatial: false
+  biomass_to_liquid: false
+  electrobiofuels: false
 
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#electricity

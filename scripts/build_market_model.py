@@ -15,7 +15,7 @@ import logging
 from functools import reduce
 
 import geopandas as gpd
-#import numpy as np
+import numpy as np
 import pandas as pd
 import pypsa
 #import scipy as sp
@@ -113,14 +113,113 @@ if __name__ == "__main__":
 
     # aggregate the buses per bidding zone (only in DE)
     MM_net = aggregate_buses(MM_net, mapping_dict, bz_shapes_DE)
+
     # for every generator in DE: replace connecting bus with new bz-bus according to mapping dictionary
     MM_net.generators = transfer_components(MM_net.generators, mapping_dict)
+
     # for every load in DE: replace connecting bus with new bz-bus according to mapping dictionary, TODO: Maybe aggregate loads per bus?
     MM_net.loads = transfer_components(MM_net.loads, mapping_dict)
+
     # for every StorageUnit in DE: replace connecting bus with new bz-bus according to mapping dictionary
     MM_net.storage_units = transfer_components(MM_net.storage_units, mapping_dict)
+
     # stores doesn't have to be transfered because they are attached to the battery buses (and these are already transfered)
     # sub_networks doesn't have to be transfered, because there are none in DE
+
+    lines_aggregation_methods = {"bus0": "first",
+                        "bus1": "first",
+                        "type": "first",
+                        "x": "mean",
+                        "r": "mean",
+                        "g": "mean",
+                        "b": "mean",
+                        "s_nom": "sum",
+                        "s_nom_mod": "mean",
+                        "s_nom_extendable": "first",
+                        "s_nom_max": "max",
+                        "s_nom_min": "min",
+                        "s_nom_set": "first",
+                        "s_max_pu": "mean",
+                        "capital_cost": "mean",
+                        "overnight_cost": "mean",
+                        "discount_rate": "mean",
+                        "fom_cost": "mean",
+                        "active": "first",
+                        "build_year": "min",
+                        "lifetime": "max",
+                        "length": "sum",
+                        "carrier": "first",
+                        "terrain_factor": "mean",
+                        "num_parallel": "sum",
+                        "v_ang_min": "first",
+                        "v_ang_max": "first",
+                        "sub_network": "first",
+                        "x_pu": "mean",
+                        "r_pu": "mean",
+                        "g_pu": "mean",
+                        "b_pu": "mean",
+                        "x_pu_eff": "mean",
+                        "r_pu_eff": "mean",
+                        "s_nom_opt": "mean",
+                        "v_nom": "mean",
+                        "i_nom": "mean",
+                        "dc": "first",
+                        "pairing": "first"}
+
+    links_aggregation_methods = {"bus0": "first",
+                        "bus1": "first",
+                        "type": "first",
+                        'carrier': "first",
+                        'efficiency': "mean",
+                        'active': "first",
+                        'build_year': "min",
+                        'lifetime': "max", 
+                        'p_nom': "sum", 
+                        'p_nom_mod': "mean", 
+                        'p_nom_extendable': "first", 
+                        'p_nom_min': "min",
+                        'p_nom_max': "max", 
+                        'p_nom_set': "sum", 
+                        'p_set': "sum", 
+                        'p_init': "sum", 
+                        'p_min_pu': "mean", 
+                        'p_max_pu': "mean",
+                        'capital_cost': "mean", 
+                        'overnight_cost': "mean", 
+                        'discount_rate': "mean", 
+                        'fom_cost': "mean",
+                        'marginal_cost': "mean", 
+                        'marginal_cost_quadratic': "mean", 
+                        'stand_by_cost': "mean", 
+                        'length': "sum",
+                        'terrain_factor': "mean", 
+                        'committable': "first", 
+                        'start_up_cost': "mean", 
+                        'shut_down_cost': "mean",
+                        'min_up_time': "mean", 
+                        'min_down_time': "mean", 
+                        'up_time_before': "mean", 
+                        'down_time_before': "mean",
+                        'ramp_limit_up': "mean", 
+                        'ramp_limit_down': "mean", 
+                        'ramp_limit_start_up': "mean",
+                        'ramp_limit_shut_down': "mean", 
+                        'delay': "mean", 
+                        'cyclic_delay': "first", 
+                        'p_nom_opt': "mean", 
+                        'voltage': "max",
+                        'underground': "first", 
+                        'under_construction': "first", 
+                        'tags': "first", 
+                        'geometry': "first", 
+                        'dc': "first",
+                        'underwater_fraction': "mean", 
+                        'project_status': "first",
+                        "pairing": "first"}
+
+    # for every line/link in DE: aggregate capacity
+    MM_net.lines = aggregate_lines_or_links(MM_net.lines, lines_aggregation_methods, mapping_dict)
+    MM_net.links = aggregate_lines_or_links(MM_net.links, links_aggregation_methods, mapping_dict, ["pairing", "carrier"])
 
     # set the extendability of lines/links correctly
     MM_net.lines.loc[:,"p_nom_extendable"] = False

@@ -75,7 +75,7 @@ rule create_bz_bus_mapping:
         RM_network=resources("networks/base_s_{clusters}.nc"),
         bz_shapes=resources("bidding_zones.geojson"),
     output:
-        resources("{BZ_CONFIG}_bz_bus_mapping_{clusters}.csv"),
+        mapping=resources("{BZ_CONFIG}_bz_bus_mapping_{clusters}.csv"),
     log:
         logs("create_bz_bus_mapping_{BZ_CONFIG}_{clusters}"),
     benchmark:
@@ -113,6 +113,7 @@ rule add_existing_baseyear_multimodel:
         mem_mb=3000,
     params:
         baseyear=config_provider("scenario", "planning_horizons", 0),
+        sector=config_provider("sector"),
         existing_capacities=config_provider("existing_capacities"),
         carriers=config_provider("electricity", "renewable_carriers"),
         costs=config_provider("costs"),
@@ -120,7 +121,7 @@ rule add_existing_baseyear_multimodel:
     message:
         "Adding existing infrastructure for base year for {wildcards.clusters} clusters, {wildcards.planning_horizons} planning horizons, {wildcards.opts} electric options"
     script:
-        scripts("add_existing_baseyear_multimodal.py")
+        scripts("add_existing_baseyear_multimodel.py")
 
 
 
@@ -147,7 +148,7 @@ rule add_brownfield_multimodel:
 
 
 
-rule create_market_model:
+rule build_market_model:
     input:
         network=resources("networks/base_s_{clusters}_elec_{opts}_{planning_horizons}_MM_brownfield.nc"),
         mapping=resources(f"{BZ_CONFIG}_bz_bus_mapping_{{clusters}}.csv"),
@@ -155,15 +156,15 @@ rule create_market_model:
     output:
         MM_network=resources("networks/base_s_{clusters}_elec_{opts}_{planning_horizons}_MM_unsolved.nc"),
     log:
-        logs("create_RM_and_MM_{clusters}_{opts}_{planning_horizons}"),
+        logs("build_market_model_{clusters}_{opts}_{planning_horizons}"),
     benchmark:
-        benchmarks("create_RM_and_MM_{clusters}_{opts}_{planning_horizons}")
+        benchmarks("build_market_model_{clusters}_{opts}_{planning_horizons}")
     params:
         bz_config=config_provider("scenario", "bz_config"),
     message:
         "Aggregating the network of the redispatch model to the network of the market model"
     script:
-        scripts("create_market_model.py")
+        scripts("build_market_model.py")
 
 
 
@@ -189,6 +190,9 @@ rule solve_network_multimodel:
     params:
         solving=config_provider("solving"),
         foresight=config_provider("foresight"),
+        co2_sequestration_potential=config_provider(
+            "sector", "co2_sequestration_potential", default=200
+        ),
     message:
         "Solving electricity network optimization for {wildcards.clusters} clusters and {wildcards.opts} electric options"
     script:
@@ -196,20 +200,20 @@ rule solve_network_multimodel:
 
 
 
-rule create_redispatch_model:
+rule build_redispatch_model:
     input:
         MM_network=(RESULTS + "networks/base_s_{clusters}_elec_{opts}_{planning_horizons}_MM.nc"),
         RM_network=resources("networks/base_s_{clusters}_elec_{opts}_{planning_horizons}_MM_brownfield.nc"),
     output:
         network=resources("networks/base_s_{clusters}_elec_{opts}_{planning_horizons}_RM_unsolved.nc"),
     log:
-        logs("create_redispatch_model_{clusters}_{opts}_{planning_horizons}"),
+        logs("build_redispatch_model_{clusters}_{opts}_{planning_horizons}"),
     benchmark:
-        benchmarks("create_redispatch_model_{clusters}_{opts}_{planning_horizons}")
+        benchmarks("build_redispatch_model_{clusters}_{opts}_{planning_horizons}")
     message:
         "Transfering the capacity and dispatch from the solved market model to the unsolved redispatch model. Also setting the extendability correctly for RM."
     script:
-        scripts("create_redispatch_model.py")
+        scripts("build_redispatch_model.py")
 
 
 
