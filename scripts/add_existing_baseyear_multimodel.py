@@ -348,16 +348,24 @@ def add_power_capacities_installed_before_baseyear(
             bus0 = vars(spatial)[carrier[generator]].nodes
             if "EU" not in vars(spatial)[carrier[generator]].locations:
                 bus0 = bus0.intersection(capacity.index + " " + carrier[generator])
+                
+            # work around for mismatched lenghts
+            if len(vars(spatial)[carrier[generator]].locations) != len(bus0):
+                locations = bus0
+            else:
+                locations = vars(spatial)[carrier[generator]].locations
 
             # check for missing bus
             missing_bus = pd.Index(bus0).difference(n.buses.index)
             if not missing_bus.empty:
                 logger.info(f"add buses {bus0}")
+                logger.info(generator)
+                logger.info(vars(spatial)[carrier[generator]].locations)
                 n.add(
                     "Bus",
                     bus0,
                     carrier=generator,
-                    location=vars(spatial)[carrier[generator]].locations,
+                    location=locations,
                     unit="MWh_el",
                 )
 
