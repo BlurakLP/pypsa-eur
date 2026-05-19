@@ -72,14 +72,14 @@ rule create_custom_busmap:
 
 rule create_bz_bus_mapping:
     input:
-        RM_network=resources("networks/base_s_{clusters}.nc"),
+        RM_network=resources("networks/base_s_{clusters}_elec_{opts}_{planning_horizons}_MM_brownfield.nc"),
         bz_shapes=resources("bidding_zones.geojson"),
     output:
-        mapping=resources("{BZ_CONFIG}_bz_bus_mapping_{clusters}.csv"),
+        mapping=resources("{BZ_CONFIG}_bz_bus_mapping_{clusters}_{planning_horizons}.csv"),
     log:
-        logs("create_bz_bus_mapping_{BZ_CONFIG}_{clusters}"),
+        logs("create_bz_bus_mapping_{BZ_CONFIG}_{clusters}_{planning_horizons}"),
     benchmark:
-        benchmarks("create_bz_bus_mapping_{BZ_CONFIG}_{clusters}")
+        benchmarks("create_bz_bus_mapping_{BZ_CONFIG}_{clusters}_{planning_horizons}")
     wildcard_constraints:
         # TODO: The first planning_horizon needs to be aligned across scenarios
         # snakemake does not support passing functions to wildcard_constraints
@@ -151,7 +151,7 @@ rule add_brownfield_multimodel:
 rule build_market_model:
     input:
         network=resources("networks/base_s_{clusters}_elec_{opts}_{planning_horizons}_MM_brownfield.nc"),
-        mapping=resources(f"{BZ_CONFIG}_bz_bus_mapping_{{clusters}}.csv"),
+        mapping=resources(f"{BZ_CONFIG}_bz_bus_mapping_{{clusters}}_{{planning_horizons}}.csv"),
         bz_shapes=resources("bidding_zones.geojson"),
     output:
         MM_network=resources("networks/base_s_{clusters}_elec_{opts}_{planning_horizons}_MM_unsolved.nc"),
