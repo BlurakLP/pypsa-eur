@@ -151,7 +151,7 @@ rule add_brownfield_multimodel:
 rule build_market_model:
     input:
         network=resources("networks/base_s_{clusters}_elec_{opts}_{planning_horizons}_MM_brownfield.nc"),
-        mapping=resources(f"{BZ_CONFIG}_bz_bus_mapping_{{clusters}}_{{planning_horizons}}.csv"),
+        mapping=resources(f"{BZ_CONFIG}_bz_bus_mapping_{{clusters}}_{{opts}}_{{planning_horizons}}.csv"),
         bz_shapes=resources("bidding_zones.geojson"),
     output:
         MM_network=resources("networks/base_s_{clusters}_elec_{opts}_{planning_horizons}_MM_unsolved.nc"),
