@@ -27,7 +27,27 @@ from scripts.cluster_network import busmap_for_admin_regions, cluster_regions
 
 logger = logging.getLogger(__name__)
 
-def aggregate_lines_or_links(df_components, aggregation_methods, mapping_dict, groupby_column="pairing"):
+# ensure, that the dict for aggregation methods is not too long or too short
+def build_aggregation_dict(columns, custom_methods):
+    mapping_dict = dict()
+    # get the columns from Input
+
+    # build dictionary: for every column select custom_method or if not available select standard (mean or first depending on datatype)
+    for column in columns:
+        if column in custom_methods:
+            mapping_dict[column] = custom_methods[column]
+        else:
+            # TODO: If datatype of column is not a number (but object or string) then use "first" method
+            # The exception-loop below doesn't work right because the error occurs later when applying the dictionary, not here
+            try:
+                mapping_dict[column] = "mean"
+            except:
+                mapping_dict[column] = "first"
+
+    return mapping_dict
+
+
+def aggregate_lines_or_links(df_components, mapping_dict, custom_aggregation_methods=dict(), groupby_column="pairing"):
     # replace both connected buses according to mapping
     df_components.loc[df_components.loc[:,"bus0"].str.contains("DE"),"bus0"] = df_components.loc[df_components.loc[:,"bus0"].str.contains("DE"),"bus0"].apply(lambda x: mapping_dict[x])
     df_components.loc[df_components.loc[:,"bus1"].str.contains("DE"),"bus1"] = df_components.loc[df_components.loc[:,"bus1"].str.contains("DE"),"bus1"].apply(lambda x: mapping_dict[x])
@@ -41,6 +61,7 @@ def aggregate_lines_or_links(df_components, aggregation_methods, mapping_dict, g
     df_components["pairing"] = df_components.apply(lambda row: "_".join(sorted([row["bus0"], row["bus1"]])), axis=1)
 
     # aggregate the lines where "pairing" is the same and apply different aggregation methods per column
+    aggregation_methods = build_aggregation_dict(df_components.columns, custom_aggregation_methods)
     df_components = df_components.groupby(groupby_column).agg(aggregation_methods)
     df_components = df_components.drop(columns=["pairing"])
 
@@ -127,99 +148,54 @@ if __name__ == "__main__":
     # sub_networks doesn't have to be transfered, because there are none in DE
 
     lines_aggregation_methods = {"bus0": "first",
-                        "bus1": "first",
-                        "type": "first",
-                        "x": "mean",
-                        "r": "mean",
-                        "g": "mean",
-                        "b": "mean",
-                        "s_nom": "sum",
-                        "s_nom_mod": "mean",
-                        "s_nom_extendable": "first",
-                        "s_nom_max": "max",
-                        "s_nom_min": "min",
-                        "s_nom_set": "first",
-                        "s_max_pu": "mean",
-                        "capital_cost": "mean",
-                        "overnight_cost": "mean",
-                        "discount_rate": "mean",
-                        "fom_cost": "mean",
-                        "active": "first",
-                        "build_year": "min",
-                        "lifetime": "max",
-                        "length": "sum",
-                        "carrier": "first",
-                        "terrain_factor": "mean",
-                        "num_parallel": "sum",
-                        "v_ang_min": "first",
-                        "v_ang_max": "first",
-                        "sub_network": "first",
-                        "x_pu": "mean",
-                        "r_pu": "mean",
-                        "g_pu": "mean",
-                        "b_pu": "mean",
-                        "x_pu_eff": "mean",
-                        "r_pu_eff": "mean",
-                        "s_nom_opt": "mean",
-                        "v_nom": "mean",
-                        "i_nom": "mean",
-                        "dc": "first",
-                        "pairing": "first"}
+                                "bus1": "first",
+                                "type": "first",
+                                "s_nom": "sum",
+                                "s_nom_extendable": "first",
+                                "s_nom_max": "max",
+                                "s_nom_min": "min",
+                                "s_nom_set": "first",
+                                "active": "first",
+                                "build_year": "min",
+                                "lifetime": "max",
+                                "length": "sum",
+                                "carrier": "first",
+                                "num_parallel": "sum",
+                                "v_ang_min": "first",
+                                "v_ang_max": "first",
+                                "sub_network": "first",
+                                "dc": "first",
+                                "pairing": "first"}
 
     links_aggregation_methods = {"bus0": "first",
                         "bus1": "first",
                         "type": "first",
                         'carrier': "first",
-                        'efficiency': "mean",
                         'active': "first",
                         'build_year': "min",
                         'lifetime': "max", 
-                        'p_nom': "sum", 
-                        'p_nom_mod': "mean", 
+                        'p_nom': "sum",  
                         'p_nom_extendable': "first", 
                         'p_nom_min': "min",
                         'p_nom_max': "max", 
                         'p_nom_set': "sum", 
                         'p_set': "sum", 
                         'p_init': "sum", 
-                        'p_min_pu': "mean", 
-                        'p_max_pu': "mean",
-                        'capital_cost': "mean", 
-                        'overnight_cost': "mean", 
-                        'discount_rate': "mean", 
-                        'fom_cost': "mean",
-                        'marginal_cost': "mean", 
-                        'marginal_cost_quadratic': "mean", 
-                        'stand_by_cost': "mean", 
                         'length': "sum",
-                        'terrain_factor': "mean", 
                         'committable': "first", 
-                        'start_up_cost': "mean", 
-                        'shut_down_cost': "mean",
-                        'min_up_time': "mean", 
-                        'min_down_time': "mean", 
-                        'up_time_before': "mean", 
-                        'down_time_before': "mean",
-                        'ramp_limit_up': "mean", 
-                        'ramp_limit_down': "mean", 
-                        'ramp_limit_start_up': "mean",
-                        'ramp_limit_shut_down': "mean", 
-                        'delay': "mean", 
                         'cyclic_delay': "first", 
-                        'p_nom_opt': "mean", 
                         'voltage': "max",
                         'underground': "first", 
                         'under_construction': "first", 
                         'tags': "first", 
                         'geometry': "first", 
                         'dc': "first",
-                        'underwater_fraction': "mean", 
                         'project_status': "first",
                         "pairing": "first"}
 
     # for every line/link in DE: aggregate capacity
-    MM_net.lines = aggregate_lines_or_links(MM_net.lines, lines_aggregation_methods, mapping_dict)
-    MM_net.links = aggregate_lines_or_links(MM_net.links, links_aggregation_methods, mapping_dict, ["pairing", "carrier"])
+    MM_net.lines = aggregate_lines_or_links(MM_net.lines, mapping_dict, lines_aggregation_methods)
+    MM_net.links = aggregate_lines_or_links(MM_net.links, mapping_dict, links_aggregation_methods, ["pairing", "carrier"])
 
     # set the extendability of lines/links correctly
     MM_net.lines.loc[:,"p_nom_extendable"] = False
