@@ -77,14 +77,14 @@ rule create_bz_bus_mapping:
     output:
         mapping=resources("{BZ_CONFIG}_bz_bus_mapping_{clusters}_{opts}_{planning_horizons}.csv"),
     log:
-        logs("create_bz_bus_mapping_{BZ_CONFIG}_{clusters}_{planning_horizons}"),
+        logs("create_bz_bus_mapping_{BZ_CONFIG}_{clusters}_{opts}_{planning_horizons}"),
     benchmark:
-        benchmarks("create_bz_bus_mapping_{BZ_CONFIG}_{clusters}_{planning_horizons}")
+        benchmarks("create_bz_bus_mapping_{BZ_CONFIG}_{clusters}_{opts}_{planning_horizons}")
     wildcard_constraints:
         # TODO: The first planning_horizon needs to be aligned across scenarios
         # snakemake does not support passing functions to wildcard_constraints
         # reference: https://github.com/snakemake/snakemake/issues/2703
-        #planning_horizons=config["scenario"]["planning_horizons"][0],  #only applies to baseyear
+        # planning_horizons=config["scenario"]["planning_horizons"][0],  #only applies to baseyear
     message:
         "Creating mapping between buses and bidding-zones (according to custom bidding zone setup)."
     script:
