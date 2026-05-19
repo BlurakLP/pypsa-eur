@@ -75,7 +75,7 @@ rule create_bz_bus_mapping:
         RM_network=resources("networks/base_s_{clusters}_elec_{opts}_{planning_horizons}_MM_brownfield.nc"),
         bz_shapes=resources("bidding_zones.geojson"),
     output:
-        mapping=resources("{BZ_CONFIG}_bz_bus_mapping_{clusters}_{planning_horizons}.csv"),
+        mapping=resources("{BZ_CONFIG}_bz_bus_mapping_{clusters}_{opts}_{planning_horizons}.csv"),
     log:
         logs("create_bz_bus_mapping_{BZ_CONFIG}_{clusters}_{planning_horizons}"),
     benchmark:
