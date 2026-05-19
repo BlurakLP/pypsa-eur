@@ -17,6 +17,7 @@ from functools import reduce
 import geopandas as gpd
 import numpy as np
 import pandas as pd
+from pandas.api.types import is_numeric_dtype
 import pypsa
 #import scipy as sp
 #from pypsa.clustering.spatial import busmap_by_stubs, get_clustering_from_busmap
@@ -28,21 +29,21 @@ from scripts.cluster_network import busmap_for_admin_regions, cluster_regions
 logger = logging.getLogger(__name__)
 
 # ensure, that the dict for aggregation methods is not too long or too short
-def build_aggregation_dict(columns, custom_methods):
+def build_aggregation_dict(input_data, custom_methods):
     mapping_dict = dict()
-    # get the columns from Input
 
     # build dictionary: for every column select custom_method or if not available select standard (mean or first depending on datatype)
-    for column in columns:
+    for column in input_data.columns:
+        dtype = input_data[column].dtype
+
         if column in custom_methods:
             mapping_dict[column] = custom_methods[column]
         else:
-            # TODO: If datatype of column is not a number (but object or string) then use "first" method
-            # The exception-loop below doesn't work right because the error occurs later when applying the dictionary, not here
-            try:
-                mapping_dict[column] = "mean"
-            except:
+            # If datatype of column is not a number (but object or string) then use "first" method
+            if not is_numeric_dtype(dtype):
                 mapping_dict[column] = "first"
+            else:
+                mapping_dict[column] = "mean"
 
     return mapping_dict
 
@@ -61,7 +62,7 @@ def aggregate_lines_or_links(df_components, mapping_dict, custom_aggregation_met
     df_components["pairing"] = df_components.apply(lambda row: "_".join(sorted([row["bus0"], row["bus1"]])), axis=1)
 
     # aggregate the lines where "pairing" is the same and apply different aggregation methods per column
-    aggregation_methods = build_aggregation_dict(df_components.columns, custom_aggregation_methods)
+    aggregation_methods = build_aggregation_dict(df_components, custom_aggregation_methods)
     df_components = df_components.groupby(groupby_column).agg(aggregation_methods)
     df_components = df_components.drop(columns=["pairing"])
 
