@@ -381,56 +381,8 @@ def add_power_capacities_installed_before_baseyear(
                     already_build.str.replace(name_suffix, "")
                 ].values
 
-            if not new_build.empty:
-                new_capacity = capacity.loc[new_build.str.replace(name_suffix, "")]
+            # Info: deleted here the creation of new links
 
-                if generator != "urban central solid biomass CHP":
-                    n.add(
-                        "Link",
-                        new_capacity.index,
-                        suffix=name_suffix,
-                        bus0=bus0,
-                        bus1=new_capacity.index,
-                        bus2="co2 atmosphere",
-                        carrier=generator,
-                        marginal_cost=costs.at[generator, "efficiency"]
-                        * costs.at[generator, "VOM"],  # NB: VOM is per MWel
-                        capital_cost=costs.at[generator, "efficiency"]
-                        * costs.at[
-                            generator, "capital_cost"
-                        ],  # NB: fixed cost is per MWel
-                        p_nom=new_capacity / costs.at[generator, "efficiency"],
-                        efficiency=costs.at[generator, "efficiency"],
-                        efficiency2=costs.at[carrier[generator], "CO2 intensity"],
-                        build_year=grouping_year,
-                        lifetime=lifetime_assets.loc[new_capacity.index],
-                    )
-                else:
-                    key = "central solid biomass CHP"
-                    central_heat = n.buses.query(
-                        "carrier == 'urban central heat'"
-                    ).location.unique()
-                    heat_buses = new_capacity.index.map(
-                        lambda i: i + " urban central heat" if i in central_heat else ""
-                    )
-
-                    n.add(
-                        "Link",
-                        new_capacity.index,
-                        suffix=name_suffix,
-                        bus0=spatial.biomass.df.loc[new_capacity.index]["nodes"].values,
-                        bus1=new_capacity.index,
-                        bus2=heat_buses,
-                        carrier=generator,
-                        p_nom=new_capacity / costs.at[key, "efficiency"],
-                        capital_cost=costs.at[key, "capital_cost"]
-                        * costs.at[key, "efficiency"],
-                        marginal_cost=costs.at[key, "VOM"],
-                        efficiency=costs.at[key, "efficiency"],
-                        build_year=grouping_year,
-                        efficiency2=costs.at[key, "efficiency-heat"],
-                        lifetime=lifetime_assets.loc[new_capacity.index],
-                    )
         # check if existing capacities are larger than technical potential
         existing_large = n.generators[
             n.generators["p_nom_min"] > n.generators["p_nom_max"]

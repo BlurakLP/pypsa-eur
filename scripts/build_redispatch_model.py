@@ -30,11 +30,16 @@ logger = logging.getLogger(__name__)
 
 def add_dispatch(net_in, net_out):
     # get the dispatch from one network
-    net_in_dispatch = net_in.generators_t.p / net_in.generators.p_nom
-
+    net_in_dispatch_gen = net_in.generators_t.p / net_in.generators.p_nom
     # set the dispatch in the redispatch model
-    net_out.generators_t.p_min_pu = net_in_dispatch
-    net_out.generators_t.p_max_pu = net_in_dispatch
+    net_out.generators_t.p_min_pu = net_in_dispatch_gen
+    net_out.generators_t.p_max_pu = net_in_dispatch_gen
+
+    # get the dispatch from one network
+    net_in_dispatch_stor = net_in.storage_units_t.p / net_in.storage_units.p_nom
+    # set the dispatch in the redispatch model
+    net_out.storage_units_t.p_min_pu = net_in_dispatch_stor
+    net_out.storage_units_t.p_max_pu = net_in_dispatch_stor
 
     return net_out
 
