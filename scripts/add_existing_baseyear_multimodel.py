@@ -345,7 +345,8 @@ def add_power_capacities_installed_before_baseyear(
                 )
 
         else:
-            bus0 = vars(spatial)[carrier[generator]].nodes
+            # the following part is commented because it added buses (for sector coupling?)
+            """ bus0 = vars(spatial)[carrier[generator]].nodes
             if "EU" not in vars(spatial)[carrier[generator]].locations:
                 bus0 = bus0.intersection(capacity.index + " " + carrier[generator])
                 
@@ -367,7 +368,7 @@ def add_power_capacities_installed_before_baseyear(
                     carrier=generator,
                     location=locations,
                     unit="MWh_el",
-                )
+                ) """
 
             already_build = n.links.index.intersection(asset_i)
             new_build = asset_i.difference(n.links.index)
