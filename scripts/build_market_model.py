@@ -152,19 +152,19 @@ if __name__ == "__main__":
                                 "bus1": "first",
                                 "type": "first",
                                 "s_nom": "sum",
-                                "s_nom_extendable": "first",
-                                "s_nom_max": "max",
-                                "s_nom_min": "min",
-                                "s_nom_set": "first",
+                                "s_nom_extendable": "first",    # should be: If one True, then True
+                                "s_nom_max": "sum",
+                                "s_nom_min": "sum",
+                                "s_nom_set": "first",           # Is later set at optimization
                                 "active": "first",
-                                "build_year": "min",
-                                "lifetime": "max",
+                                "build_year": "min",            # doesn't matter here
+                                "lifetime": "max",              # doesn't matter here
                                 "length": "sum",
                                 "carrier": "first",
                                 "num_parallel": "sum",
-                                "v_ang_min": "first",
-                                "v_ang_max": "first",
-                                "sub_network": "first",
+                                "v_ang_min": "first",           # not used currently
+                                "v_ang_max": "first",           # not used currently
+                                "sub_network": "first",         # technically shouldn't set by hand
                                 "dc": "first",
                                 "pairing": "first"}
 
@@ -177,8 +177,8 @@ if __name__ == "__main__":
                         'lifetime': "max", 
                         'p_nom': "sum",  
                         'p_nom_extendable': "first", 
-                        'p_nom_min': "min",
-                        'p_nom_max': "max", 
+                        'p_nom_min': "sum",
+                        'p_nom_max': "sum", 
                         'p_nom_set': "sum", 
                         'p_set': "sum", 
                         'p_init': "sum", 
@@ -194,13 +194,20 @@ if __name__ == "__main__":
                         'project_status': "first",
                         "pairing": "first"}
 
+    # set the extendability of lines correctly by locking their optimization range 
+    extendable_lines = MM_net.lines[MM_net.lines.s_nom_extendable].index
+    MM_net.lines.loc[extendable_lines, "s_nom_min"] = MM_net.lines.loc[extendable_lines, "s_nom"]
+    MM_net.lines.loc[extendable_lines, "s_nom_max"] = MM_net.lines.loc[extendable_lines, "s_nom"]
+
+    # set the extendability of links correctly by locking their optimization range 
+    extendable_links = MM_net.links[MM_net.links.s_nom_extendable].index
+    MM_net.links.loc[extendable_links, "p_nom_min"] = MM_net.links.loc[extendable_links, "p_nom"]
+    MM_net.lines.loc[extendable_links, "p_nom_max"] = MM_net.links.loc[extendable_links, "p_nom"]
+
+
     # for every line/link in DE: aggregate capacity
     MM_net.lines = aggregate_lines_or_links(MM_net.lines, mapping_dict, lines_aggregation_methods)
     MM_net.links = aggregate_lines_or_links(MM_net.links, mapping_dict, links_aggregation_methods, ["pairing", "carrier"])
-
-    # set the extendability of lines/links correctly
-    MM_net.lines.loc[:,"p_nom_extendable"] = False
-    MM_net.links.loc[:,"p_nom_extendable"] = False
 
     MM_net.export_to_netcdf(snakemake.output.MM_network)
 

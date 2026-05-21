@@ -36,10 +36,16 @@ def add_dispatch(net_in, net_out):
     net_out.generators_t.p_max_pu = net_in_dispatch_gen
 
     # get the dispatch from one network
-    net_in_dispatch_stor = net_in.storage_units_t.p / net_in.storage_units.p_nom
+    net_in_dispatch_storage = net_in.storage_units_t.p / net_in.storage_units.p_nom
     # set the dispatch in the redispatch model
-    net_out.storage_units_t.p_min_pu = net_in_dispatch_stor
-    net_out.storage_units_t.p_max_pu = net_in_dispatch_stor
+    net_out.storage_units_t.p_min_pu = net_in_dispatch_storage
+    net_out.storage_units_t.p_max_pu = net_in_dispatch_storage
+
+    # get the dispatch from one network
+    net_in_dispatch_store = net_in.stores_t.e / net_in.stores.e_nom
+    # set the dispatch in the redispatch model
+    net_out.stores_t.e_min_pu = net_in_dispatch_store
+    net_out.stores_t.e_max_pu = net_in_dispatch_store
 
     return net_out
 
@@ -66,41 +72,30 @@ def add_redispatch_capacity(net_in, net_out):
 
     return net_out
 
+def fix_capacity(components_from_solved, network_template_RM, attr):
+    # copy from solved network and adjust parameters
+    components = components_from_solved.copy()
+    extendable_components = components_from_solved[components_from_solved.loc[:, f"{attr}_nom_extendable"]].index
+    components.loc[extendable_components,f"{attr}_nom"] = components_from_solved.loc[extendable_components,f"{attr}_nom_opt"]
+    components.loc[:,f"{attr}_extendable"] = False
+    
+    # retrieve the detailed bus allocation
+    for idx in components.index:
+        components.loc[idx,"bus"] = network_template_RM.storage_units.loc[idx,"bus"]
+    
+    return components
 
 def transfer_capacity(network_MM_solved, network_template_RM):
+    # generators
+    network_template_RM.generators = fix_capacity(network_MM_solved.generators, network_template_RM, "p")
+    # stores
+    network_template_RM.stores = fix_capacity(network_MM_solved.stores, network_template_RM, "e")
+    # storage_units
+    network_template_RM.storage_units = fix_capacity(network_MM_solved.storage_units, network_template_RM, "p")
 
-    RM_net = network_template_RM.copy()
+    # leave the lines and links as they are in the RM (they were not extended and flow should be (re)calculated)
 
-    # generators: copy from solved MM and adjust parameters
-    RM_net.generators = network_MM_solved.generators.copy()
-    RM_net.generators.loc[:,"p_nom_extendable"] = False
-
-    # stores: copy from solved MM and adjust parameters
-    RM_net.stores = network_MM_solved.stores.copy()
-    RM_net.stores.loc[:,"p_nom_extendable"] = False
-
-    # storage_units: copy from solved MM and adjust parameters
-    RM_net.storage_units = network_MM_solved.storage_units.copy()
-    RM_net.storage_units.loc[:,"p_nom_extendable"] = False
-
-    # for generators, stores and storage_units: get the bus allocation from before the market model
-    for idx in RM_net.generators.index:
-        RM_net.generators.loc[idx,"bus"] = network_template_RM.generators.loc[idx,"bus"]
-
-    for idx in RM_net.stores.index:
-        RM_net.stores.loc[idx,"bus"] = network_template_RM.stores.loc[idx,"bus"]
-
-    for idx in RM_net.storage_units.index:
-        RM_net.storage_units.loc[idx,"bus"] = network_template_RM.storage_units.loc[idx,"bus"]
-
-    # for lines and links: transfer the extendability from before the market model
-    for idx in RM_net.links.index:
-        RM_net.links.loc[idx,"p_nom_extendable"] = network_template_RM.links.loc[idx,"p_nom_extendable"]
-
-    for idx in RM_net.lines.index:
-        RM_net.lines.loc[idx,"p_nom_extendable"] = network_template_RM.lines.loc[idx,"p_nom_extendable"]
-
-    return RM_net
+    return network_template_RM
 
 
 if __name__ == "__main__":
