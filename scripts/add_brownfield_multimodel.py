@@ -25,6 +25,10 @@ from scripts.add_existing_baseyear import add_build_year_to_new_assets
 logger = logging.getLogger(__name__)
 idx = pd.IndexSlice
 
+def remove_redispatch_generators(n):
+    redispatch_generators = n.generators[(n.generators.index.str.contains("ramp up") | n.generators.index.str.contains("ramp down"))].index
+    n.remove("Generator", redispatch_generators)
+    return n
 
 def add_brownfield(
     n,
@@ -47,6 +51,8 @@ def add_brownfield(
         Threshold for removing assets with low capacity
     """
     logger.info(f"Preparing brownfield for the year {year}")
+
+    n_p = remove_redispatch_generators(n_p)
 
     # electric transmission grid set optimised capacities of previous as minimum
     n.lines.s_nom_min = n_p.lines.s_nom_opt
