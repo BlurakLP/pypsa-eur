@@ -202,7 +202,7 @@ if __name__ == "__main__":
     # set the extendability of links correctly by locking their optimization range 
     extendable_links = MM_net.links[MM_net.links.p_nom_extendable].index
     MM_net.links.loc[extendable_links, "p_nom_min"] = MM_net.links.loc[extendable_links, "p_nom"]
-    MM_net.lines.loc[extendable_links, "p_nom_max"] = MM_net.links.loc[extendable_links, "p_nom"]
+    MM_net.links.loc[extendable_links, "p_nom_max"] = MM_net.links.loc[extendable_links, "p_nom"]
 
 
     # for every line/link in DE: aggregate capacity
