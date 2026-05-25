@@ -77,7 +77,9 @@ def fix_capacity(components_from_solved, network_template_RM, attr):
     components = components_from_solved.copy()
     extendable_components = components_from_solved[components_from_solved.loc[:, f"{attr}_nom_extendable"]].index
     components.loc[extendable_components,f"{attr}_nom"] = components_from_solved.loc[extendable_components,f"{attr}_nom_opt"]
-    components.loc[:,f"{attr}_extendable"] = False
+    components.loc[extendable_components,f"{attr}_nom_min"] = components_from_solved.loc[extendable_components,f"{attr}_nom_opt"]
+    components.loc[extendable_components,f"{attr}_nom_max"] = components_from_solved.loc[extendable_components,f"{attr}_nom_opt"]
+    # components.loc[:,f"{attr}_extendable"] = False # not needed because I already fix the expansion limits
     
     # retrieve the detailed bus allocation
     for idx in components.index:
