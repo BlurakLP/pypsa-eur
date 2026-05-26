@@ -80,24 +80,15 @@ def fix_capacity(components_from_solved, network_template_RM, attr):
     components.loc[extendable_components,f"{attr}_nom_min"] = components_from_solved.loc[extendable_components,f"{attr}_nom_opt"]
     components.loc[extendable_components,f"{attr}_nom_max"] = components_from_solved.loc[extendable_components,f"{attr}_nom_opt"]
     # components.loc[:,f"{attr}_extendable"] = False # not needed because I already fix the expansion limits
-    
-    # retrieve the detailed bus allocation
-    for idx in components.index:
-        components.loc[idx,"bus"] = network_template_RM.storage_units.loc[idx,"bus"]
-    
+
     return components
 
-def transfer_capacity(network_MM_solved, network_template_RM):
-    # generators
-    network_template_RM.generators = fix_capacity(network_MM_solved.generators, network_template_RM, "p")
-    # stores
-    network_template_RM.stores = fix_capacity(network_MM_solved.stores, network_template_RM, "e")
-    # storage_units
-    network_template_RM.storage_units = fix_capacity(network_MM_solved.storage_units, network_template_RM, "p")
 
-    # leave the lines and links as they are in the RM (they were not extended and flow should be (re)calculated)
-
-    return network_template_RM
+def transfer_bus_allocation(components_from, components_to):
+    for idx in components_to.index:
+        components_to.loc[idx,"bus"] = components_from.loc[idx,"bus"]
+    
+    return components_to
 
 
 if __name__ == "__main__":
@@ -114,12 +105,24 @@ if __name__ == "__main__":
     MM_net = pypsa.Network(snakemake.input.MM_network)
 
     # get the unsolved but prepared network of the redispatch model
-    RM_net = pypsa.Network(snakemake.input.RM_network)
+    # this serves as a "template" where changes are applied
+    RM_net_origin = pypsa.Network(snakemake.input.RM_network)
+    RM_net = RM_net_origin.copy()
 
     # transfer the capacity and set extendability
-    RM_net_with_capacity = transfer_capacity(MM_net, RM_net)
+    # generators
+    RM_net.generators = fix_capacity(MM_net.generators, RM_net, "p")
+    RM_net.generators = transfer_bus_allocation(RM_net_origin.generators, RM_net.generators)
+    # stores
+    RM_net.stores = fix_capacity(MM_net.stores, RM_net, "e")
+    RM_net.stores = transfer_bus_allocation(RM_net_origin.stores, RM_net.stores)
+    # storage_units
+    RM_net.storage_units = fix_capacity(MM_net.storage_units, RM_net, "p")
+    RM_net.storage_units = transfer_bus_allocation(RM_net_origin.storage_units, RM_net.storage_units)
+    # leave the lines and links as they are in the RM (they were not extended and flow should be (re)calculated)
+
     # add the dispatch to the network
-    RM_net_with_dispatch = add_dispatch(MM_net, RM_net_with_capacity)
+    RM_net_with_dispatch = add_dispatch(MM_net, RM_net)
     # add redispatch capacities
     RM_net_prepared = add_redispatch_capacity(MM_net, RM_net_with_dispatch)
 
