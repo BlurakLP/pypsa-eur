@@ -36,10 +36,11 @@ def add_dispatch(net_in, net_out):
     net_out.generators_t.p_max_pu = net_in_dispatch_gen
 
     # get the dispatch from one network
-    net_in_dispatch_storage = net_in.storage_units_t.p / net_in.storage_units.p_nom
+    #net_in_dispatch_storage = net_in.storage_units_t.p / net_in.storage_units.p_nom
     # set the dispatch in the redispatch model
-    net_out.storage_units_t.p_min_pu = net_in_dispatch_storage
-    net_out.storage_units_t.p_max_pu = net_in_dispatch_storage
+    net_out.storage_units_t.p_set = net_in.storage_units_t.p
+    #net_out.storage_units_t.p_min_pu = net_in_dispatch_storage
+    #net_out.storage_units_t.p_max_pu = net_in_dispatch_storage
 
     # get the dispatch from one network
     net_in_dispatch_store = net_in.stores_t.e / net_in.stores.e_nom
