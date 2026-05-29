@@ -11,6 +11,12 @@ rule solve_multimodel_networks:
             **config["scenario"],
             run=config["run"]["name"],
         ),
+        expand(
+            RESULTS
+            + "networks/base_s_{clusters}_elec_{opts}_{baseyear}_RM.nc",
+            **config["scenario"],
+            run=config["run"]["name"],
+        ),
     message:
         "Collecting solved multi-model network files"
 
@@ -24,7 +30,10 @@ def input_profile_tech_brownfield(w):
 
 
 def solved_previous_horizon_multimodel(w):
-    planning_horizons = config_provider("scenario", "planning_horizons")(w)
+    try:
+        planning_horizons = config_provider("scenario", "planning_horizons")(w)
+    except:
+        return None
     i = planning_horizons.index(int(w.planning_horizons))
 
     planning_horizon_p = str(planning_horizons[i - 1])
@@ -80,11 +89,6 @@ rule create_bz_bus_mapping:
         logs("create_bz_bus_mapping_{BZ_CONFIG}_{clusters}_{opts}_{planning_horizons}"),
     benchmark:
         benchmarks("create_bz_bus_mapping_{BZ_CONFIG}_{clusters}_{opts}_{planning_horizons}")
-    wildcard_constraints:
-        # TODO: The first planning_horizon needs to be aligned across scenarios
-        # snakemake does not support passing functions to wildcard_constraints
-        # reference: https://github.com/snakemake/snakemake/issues/2703
-        # planning_horizons=config["scenario"]["planning_horizons"][0],  #only applies to baseyear
     message:
         "Creating mapping between buses and bidding-zones (according to custom bidding zone setup)."
     script:
@@ -104,10 +108,7 @@ rule add_existing_baseyear_multimodel:
     benchmark:
         benchmarks("add_existing_baseyear/base_s_{clusters}_{opts}_{planning_horizons}")
     wildcard_constraints:
-        # TODO: The first planning_horizon needs to be aligned across scenarios
-        # snakemake does not support passing functions to wildcard_constraints
-        # reference: https://github.com/snakemake/snakemake/issues/2703
-        planning_horizons=config["scenario"]["planning_horizons"][0],  #only applies to baseyear
+        planning_horizons=config["scenario"]["planning_horizons"][0],  #only applies to first planning_horizon (excluding baseyear)
     threads: 1
     resources:
         mem_mb=3000,
