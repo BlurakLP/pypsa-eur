@@ -1126,10 +1126,10 @@ def add_pipe_retrofit_constraint(n):
     if "reversed" not in n.links.columns:
         n.links["reversed"] = False
     gas_pipes_i = n.links.query(
-        "carrier == 'gas pipeline' and p_nom_extendable and ~reversed and active"
+        "(carrier == 'gas pipeline') and p_nom_extendable and ~reversed and active"
     ).index
     h2_retrofitted_i = n.links.query(
-        "carrier == 'H2 pipeline retrofitted' and p_nom_extendable and ~reversed and active"
+        "(carrier == 'H2 pipeline retrofitted') and p_nom_extendable and ~reversed and active"
     ).index
 
     if h2_retrofitted_i.empty or gas_pipes_i.empty:
