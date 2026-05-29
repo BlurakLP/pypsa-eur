@@ -81,33 +81,33 @@ def add_brownfield(
 
         # remove assets if their optimized nominal capacity is lower than a threshold
         # since CHP heat Link is proportional to CHP electric Link, make sure threshold is compatible
-        chp_heat = c.static.index[
-            (
-                c.static[f"{attr}_nom_extendable"]
-                & c.static.index.str.contains("urban central")
-            )
-            & c.static.index.str.contains("CHP")
-            & c.static.index.str.contains("heat")
-        ]
+        # chp_heat = c.static.index[
+        #     (
+        #         c.static[f"{attr}_nom_extendable"]
+        #         & c.static.index.str.contains("urban central")
+        #     )
+        #     & c.static.index.str.contains("CHP")
+        #     & c.static.index.str.contains("heat")
+        # ]
 
-        if not chp_heat.empty:
-            threshold_chp_heat = (
-                capacity_threshold
-                * c.static.efficiency[chp_heat.str.replace("heat", "electric")].values
-                * c.static.p_nom_ratio[chp_heat.str.replace("heat", "electric")].values
-                / c.static.efficiency[chp_heat].values
-            )
-            n_p.remove(
-                c.name,
-                chp_heat[
-                    c.static.loc[chp_heat, f"{attr}_nom_opt"] < threshold_chp_heat
-                ],
-            )
+        # if not chp_heat.empty:
+        #     threshold_chp_heat = (
+        #         capacity_threshold
+        #         * c.static.efficiency[chp_heat.str.replace("heat", "electric")].values
+        #         * c.static.p_nom_ratio[chp_heat.str.replace("heat", "electric")].values
+        #         / c.static.efficiency[chp_heat].values
+        #     )
+        #     n_p.remove(
+        #         c.name,
+        #         chp_heat[
+        #             c.static.loc[chp_heat, f"{attr}_nom_opt"] < threshold_chp_heat
+        #         ],
+        #     )
 
         n_p.remove(
             c.name,
             c.static.index[
-                (c.static[f"{attr}_nom_extendable"] & ~c.static.index.isin(chp_heat))
+                (c.static[f"{attr}_nom_extendable"]) #& ~c.static.index.isin(chp_heat))
                 & (c.static[f"{attr}_nom_opt"] < capacity_threshold)
             ],
         )
@@ -127,49 +127,49 @@ def add_brownfield(
             n._import_series_from_df(c.dynamic[tattr], c.name, tattr)
 
     # deal with gas network
-    if h2_retrofit:
-        # subtract the already retrofitted from the maximum capacity
-        h2_retrofitted_fixed_i = n.links[
-            (n.links.carrier == "H2 pipeline retrofitted")
-            & (n.links.build_year != year)
-        ].index
-        h2_retrofitted = n.links[
-            (n.links.carrier == "H2 pipeline retrofitted")
-            & (n.links.build_year == year)
-        ].index
+    # if h2_retrofit:
+    #     # subtract the already retrofitted from the maximum capacity
+    #     h2_retrofitted_fixed_i = n.links[
+    #         (n.links.carrier == "H2 pipeline retrofitted")
+    #         & (n.links.build_year != year)
+    #     ].index
+    #     h2_retrofitted = n.links[
+    #         (n.links.carrier == "H2 pipeline retrofitted")
+    #         & (n.links.build_year == year)
+    #     ].index
 
-        # pipe capacity always set in prepare_sector_network to todays gas grid capacity * H2_per_CH4
-        # and is therefore constant up to this point
-        pipe_capacity = n.links.loc[h2_retrofitted, "p_nom_max"]
-        # already retrofitted capacity from gas -> H2
-        already_retrofitted = (
-            n.links.loc[h2_retrofitted_fixed_i, "p_nom"]
-            .rename(lambda x: x.split("-2")[0] + f"-{year}")
-            .groupby(level=0)
-            .sum()
-        )
-        remaining_capacity = (
-            pipe_capacity
-            - already_retrofitted.reindex(index=pipe_capacity.index).fillna(0)
-        ).clip(lower=0)
-        n.links.loc[h2_retrofitted, "p_nom_max"] = remaining_capacity
+    #     # pipe capacity always set in prepare_sector_network to todays gas grid capacity * H2_per_CH4
+    #     # and is therefore constant up to this point
+    #     pipe_capacity = n.links.loc[h2_retrofitted, "p_nom_max"]
+    #     # already retrofitted capacity from gas -> H2
+    #     already_retrofitted = (
+    #         n.links.loc[h2_retrofitted_fixed_i, "p_nom"]
+    #         .rename(lambda x: x.split("-2")[0] + f"-{year}")
+    #         .groupby(level=0)
+    #         .sum()
+    #     )
+    #     remaining_capacity = (
+    #         pipe_capacity
+    #         - already_retrofitted.reindex(index=pipe_capacity.index).fillna(0)
+    #     ).clip(lower=0)
+    #     n.links.loc[h2_retrofitted, "p_nom_max"] = remaining_capacity
 
-        # reduce gas network capacity
-        gas_pipes_i = n.links[n.links.carrier == "gas pipeline"].index
-        if not gas_pipes_i.empty:
-            # subtract the already retrofitted from today's gas grid capacity
-            pipe_capacity = n.links.loc[gas_pipes_i, "p_nom"]
-            fr = "H2 pipeline retrofitted"
-            to = "gas pipeline"
-            CH4_per_H2 = 1 / h2_retrofit_capacity_per_ch4
-            already_retrofitted.index = already_retrofitted.index.str.replace(fr, to)
-            remaining_capacity = (
-                pipe_capacity
-                - CH4_per_H2
-                * already_retrofitted.reindex(index=pipe_capacity.index).fillna(0)
-            ).clip(lower=0)
-            n.links.loc[gas_pipes_i, "p_nom"] = remaining_capacity
-            n.links.loc[gas_pipes_i, "p_nom_max"] = remaining_capacity
+    #     # reduce gas network capacity
+    #     gas_pipes_i = n.links[n.links.carrier == "gas pipeline"].index
+    #     if not gas_pipes_i.empty:
+    #         # subtract the already retrofitted from today's gas grid capacity
+    #         pipe_capacity = n.links.loc[gas_pipes_i, "p_nom"]
+    #         fr = "H2 pipeline retrofitted"
+    #         to = "gas pipeline"
+    #         CH4_per_H2 = 1 / h2_retrofit_capacity_per_ch4
+    #         already_retrofitted.index = already_retrofitted.index.str.replace(fr, to)
+    #         remaining_capacity = (
+    #             pipe_capacity
+    #             - CH4_per_H2
+    #             * already_retrofitted.reindex(index=pipe_capacity.index).fillna(0)
+    #         ).clip(lower=0)
+    #         n.links.loc[gas_pipes_i, "p_nom"] = remaining_capacity
+    #         n.links.loc[gas_pipes_i, "p_nom_max"] = remaining_capacity
 
 
 def disable_grid_expansion_if_limit_hit(n):
@@ -259,88 +259,88 @@ def adjust_renewable_profiles(n, input_profiles, params, year):
             n.generators_t.p_max_pu.loc[:, p_max_pu.columns] = p_max_pu
 
 
-def update_heat_pump_efficiency(n: pypsa.Network, n_p: pypsa.Network, year: int):
-    """
-    Update the efficiency of heat pumps from previous years to current year
-    (e.g. 2030 heat pumps receive 2040 heat pump COPs in 2030).
+# def update_heat_pump_efficiency(n: pypsa.Network, n_p: pypsa.Network, year: int):
+#     """
+#     Update the efficiency of heat pumps from previous years to current year
+#     (e.g. 2030 heat pumps receive 2040 heat pump COPs in 2030).
 
-    Parameters
-    ----------
-    n : pypsa.Network
-        The original network.
-    n_p : pypsa.Network
-        The network with the updated parameters.
-    year : int
-        The year for which the efficiency is being updated.
+#     Parameters
+#     ----------
+#     n : pypsa.Network
+#         The original network.
+#     n_p : pypsa.Network
+#         The network with the updated parameters.
+#     year : int
+#         The year for which the efficiency is being updated.
 
-    Returns
-    -------
-    None
-        This function updates the efficiency in place and does not return a value.
-    """
+#     Returns
+#     -------
+#     None
+#         This function updates the efficiency in place and does not return a value.
+#     """
 
-    # get names of heat pumps in previous iteration that cannot be replaced by direct utilisation in this iteration
-    heat_pump_idx_previous_iteration = n_p.links.index[
-        n_p.links.index.str.contains("heat pump")
-        & n_p.links.index.str[:-4].isin(
-            n.links_t.efficiency.columns.str.rstrip(  # sources that can be directly used are no longer represented by heat pumps in the dynamic efficiency dataframe
-                str(year)
-            )
-        )
-    ]
-    # construct names of same-technology heat pumps in the current iteration
-    corresponding_idx_this_iteration = heat_pump_idx_previous_iteration.str[:-4] + str(
-        year
-    )
-    # update efficiency of heat pumps in previous iteration in-place to efficiency in this iteration
-    n_p.links_t["efficiency"].loc[:, heat_pump_idx_previous_iteration] = (
-        n.links_t["efficiency"].loc[:, corresponding_idx_this_iteration].values
-    )
+#     # get names of heat pumps in previous iteration that cannot be replaced by direct utilisation in this iteration
+#     heat_pump_idx_previous_iteration = n_p.links.index[
+#         n_p.links.index.str.contains("heat pump")
+#         & n_p.links.index.str[:-4].isin(
+#             n.links_t.efficiency.columns.str.rstrip(  # sources that can be directly used are no longer represented by heat pumps in the dynamic efficiency dataframe
+#                 str(year)
+#             )
+#         )
+#     ]
+#     # construct names of same-technology heat pumps in the current iteration
+#     corresponding_idx_this_iteration = heat_pump_idx_previous_iteration.str[:-4] + str(
+#         year
+#     )
+#     # update efficiency of heat pumps in previous iteration in-place to efficiency in this iteration
+#     n_p.links_t["efficiency"].loc[:, heat_pump_idx_previous_iteration] = (
+#         n.links_t["efficiency"].loc[:, corresponding_idx_this_iteration].values
+#     )
 
-    # Change efficiency2 for heat pumps that use an explicitly modelled heat source
-    previous_iteration_columns = heat_pump_idx_previous_iteration.intersection(
-        n_p.links_t["efficiency2"].columns
-    )
-    current_iteration_columns = corresponding_idx_this_iteration.intersection(
-        n.links_t["efficiency2"].columns
-    )
-    n_p.links_t["efficiency2"].loc[:, previous_iteration_columns] = (
-        n.links_t["efficiency2"].loc[:, current_iteration_columns].values
-    )
+#     # Change efficiency2 for heat pumps that use an explicitly modelled heat source
+#     previous_iteration_columns = heat_pump_idx_previous_iteration.intersection(
+#         n_p.links_t["efficiency2"].columns
+#     )
+#     current_iteration_columns = corresponding_idx_this_iteration.intersection(
+#         n.links_t["efficiency2"].columns
+#     )
+#     n_p.links_t["efficiency2"].loc[:, previous_iteration_columns] = (
+#         n.links_t["efficiency2"].loc[:, current_iteration_columns].values
+#     )
 
 
-def update_dynamic_ptes_capacity(
-    n: pypsa.Network, n_p: pypsa.Network, year: int
-) -> None:
-    """
-    Updates dynamic pit storage capacity based on district heating temperature changes.
+# def update_dynamic_ptes_capacity(
+#     n: pypsa.Network, n_p: pypsa.Network, year: int
+# ) -> None:
+#     """
+#     Updates dynamic pit storage capacity based on district heating temperature changes.
 
-    Parameters
-    ----------
-    n : pypsa.Network
-        Original network.
-    n_p : pypsa.Network
-        Network with updated parameters.
-    year : int
-        Target year for capacity update.
+#     Parameters
+#     ----------
+#     n : pypsa.Network
+#         Original network.
+#     n_p : pypsa.Network
+#         Network with updated parameters.
+#     year : int
+#         Target year for capacity update.
 
-    Returns
-    -------
-    None
-        Updates capacity in-place.
-    """
-    # pit storages in previous iteration
-    dynamic_ptes_idx_previous_iteration = n_p.stores.index[
-        n_p.stores.index.str.contains("water pits")
-    ]
-    # construct names of same-technology dynamic pit storage in the current iteration
-    corresponding_idx_this_iteration = dynamic_ptes_idx_previous_iteration.str[
-        :-4
-    ] + str(year)
-    # update pit storage capacity in previous iteration in-place to capacity in this iteration
-    n_p.stores_t.e_max_pu[dynamic_ptes_idx_previous_iteration] = n.stores_t.e_max_pu[
-        corresponding_idx_this_iteration
-    ].values
+#     Returns
+#     -------
+#     None
+#         Updates capacity in-place.
+#     """
+#     # pit storages in previous iteration
+#     dynamic_ptes_idx_previous_iteration = n_p.stores.index[
+#         n_p.stores.index.str.contains("water pits")
+#     ]
+#     # construct names of same-technology dynamic pit storage in the current iteration
+#     corresponding_idx_this_iteration = dynamic_ptes_idx_previous_iteration.str[
+#         :-4
+#     ] + str(year)
+#     # update pit storage capacity in previous iteration in-place to capacity in this iteration
+#     n_p.stores_t.e_max_pu[dynamic_ptes_idx_previous_iteration] = n.stores_t.e_max_pu[
+#         corresponding_idx_this_iteration
+#     ].values
 
 
 if __name__ == "__main__":
@@ -372,17 +372,15 @@ if __name__ == "__main__":
 
     n_p = pypsa.Network(snakemake.input.network_p)
 
-    update_heat_pump_efficiency(n, n_p, year)
+    #update_heat_pump_efficiency(n, n_p, year)
 
-    if snakemake.params.tes and snakemake.params.dynamic_ptes_capacity:
-        update_dynamic_ptes_capacity(n, n_p, year)
+    #if snakemake.params.tes and snakemake.params.dynamic_ptes_capacity:
+    #    update_dynamic_ptes_capacity(n, n_p, year)
 
     add_brownfield(
         n,
         n_p,
         year,
-        h2_retrofit=snakemake.params.H2_retrofit,
-        h2_retrofit_capacity_per_ch4=snakemake.params.H2_retrofit_capacity_per_CH4,
         capacity_threshold=snakemake.params.threshold_capacity,
     )
 
