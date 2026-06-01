@@ -78,7 +78,7 @@ rule create_custom_busmap:
 
 rule create_bz_bus_mapping:
     input:
-        RM_network=resources("networks/base_s_{clusters}_elec_{opts}_{planning_horizons}_MM_brownfield.nc"),
+        RM_network=resources("networks/base_s_{clusters}_elec_{opts}_{planning_horizons}_brownfield.nc"),
         bz_shapes=resources("bidding_zones.geojson"),
     output:
         mapping=resources("{BZ_CONFIG}_bz_bus_mapping_{clusters}_{opts}_{planning_horizons}.csv"),
@@ -104,7 +104,7 @@ rule add_existing_baseyear_multimodel:
         powerplants=resources("powerplants_s_{clusters}.csv"),
         costs=lambda w: resources(f"costs_{config_provider('scenario', 'planning_horizons',0)(w)}_processed.csv"),
     output:
-        resources("networks/base_s_{clusters}_elec_{opts}_{planning_horizons}_MM_brownfield.nc"),
+        resources("networks/base_s_{clusters}_elec_{opts}_{planning_horizons}_brownfield.nc"),
     log:
         logs("add_existing_baseyear_base_s_{clusters}_{opts}_{planning_horizons}.log"),
     benchmark:
@@ -137,7 +137,7 @@ rule add_brownfield_multimodel:
         network=resources("networks/base_s_{clusters}_elec_{opts}_{planning_horizons}.nc"),
         network_p=solved_previous_horizon_multimodel,  #solved RM/MM network at previous time step
     output:
-        resources("networks/base_s_{clusters}_elec_{opts}_{planning_horizons}_MM_brownfield.nc"),
+        resources("networks/base_s_{clusters}_elec_{opts}_{planning_horizons}_brownfield.nc"),
     log:
         logs("add_brownfield_base_s_{clusters}_{opts}_{planning_horizons}.log"),
     benchmark:
@@ -156,7 +156,7 @@ rule add_brownfield_multimodel:
 
 rule build_market_model:
     input:
-        network=resources("networks/base_s_{clusters}_elec_{opts}_{planning_horizons}_MM_brownfield.nc"),
+        network=resources("networks/base_s_{clusters}_elec_{opts}_{planning_horizons}_brownfield.nc"),
         mapping=resources(f"{BZ_CONFIG}_bz_bus_mapping_{{clusters}}_{{opts}}_{{planning_horizons}}.csv"),
         bz_shapes=resources("bidding_zones.geojson"),
     output:
@@ -168,7 +168,7 @@ rule build_market_model:
     params:
         bz_config=config_provider("scenario", "bz_config"),
     message:
-        "Aggregating the network of the redispatch model to the network of the market model"
+        "Aggregating the network to the network of the market model"
     script:
         scripts("build_market_model.py")
 
@@ -210,7 +210,7 @@ rule solve_network_multimodel:
 rule build_redispatch_model:
     input:
         MM_network=(RESULTS + "networks/base_s_{clusters}_elec_{opts}_{planning_horizons}_MM.nc"),
-        RM_network=resources("networks/base_s_{clusters}_elec_{opts}_{planning_horizons}_MM_brownfield.nc"),
+        RM_network=resources("networks/base_s_{clusters}_elec_{opts}_{planning_horizons}_brownfield.nc"),
     output:
         network=resources("networks/base_s_{clusters}_elec_{opts}_{planning_horizons}_RM_unsolved.nc"),
     log:

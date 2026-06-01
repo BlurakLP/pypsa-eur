@@ -63,7 +63,6 @@ sector:
     ptes:
       supplemental_heating:
         enable: false
-  heat_pump_sources:
   hydrogen_turbine: false
   regional_oil_demand: false
   regional_co2_sequestration_potential:
@@ -198,6 +197,7 @@ clustering:
 solving:
   options:
     noisy_costs: false
+    load_shedding: true
   solver:
     name: gurobi
   

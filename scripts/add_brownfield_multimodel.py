@@ -52,7 +52,7 @@ def add_brownfield(
     """
     logger.info(f"Preparing brownfield for the year {year}")
 
-    n_p = remove_redispatch_generators(n_p)
+    
 
     # electric transmission grid set optimised capacities of previous as minimum
     n.lines.s_nom_min = n_p.lines.s_nom_opt
@@ -216,6 +216,8 @@ if __name__ == "__main__":
         year,
         capacity_threshold=snakemake.params.threshold_capacity,
     )
+
+    n = remove_redispatch_generators(n)
 
     disable_grid_expansion_if_limit_hit(n)
 

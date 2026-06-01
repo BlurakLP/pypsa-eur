@@ -259,88 +259,88 @@ def adjust_renewable_profiles(n, input_profiles, params, year):
             n.generators_t.p_max_pu.loc[:, p_max_pu.columns] = p_max_pu
 
 
-# def update_heat_pump_efficiency(n: pypsa.Network, n_p: pypsa.Network, year: int):
-#     """
-#     Update the efficiency of heat pumps from previous years to current year
-#     (e.g. 2030 heat pumps receive 2040 heat pump COPs in 2030).
+def update_heat_pump_efficiency(n: pypsa.Network, n_p: pypsa.Network, year: int):
+    """
+    Update the efficiency of heat pumps from previous years to current year
+    (e.g. 2030 heat pumps receive 2040 heat pump COPs in 2030).
 
-#     Parameters
-#     ----------
-#     n : pypsa.Network
-#         The original network.
-#     n_p : pypsa.Network
-#         The network with the updated parameters.
-#     year : int
-#         The year for which the efficiency is being updated.
+    Parameters
+    ----------
+    n : pypsa.Network
+        The original network.
+    n_p : pypsa.Network
+        The network with the updated parameters.
+    year : int
+        The year for which the efficiency is being updated.
 
-#     Returns
-#     -------
-#     None
-#         This function updates the efficiency in place and does not return a value.
-#     """
+    Returns
+    -------
+    None
+        This function updates the efficiency in place and does not return a value.
+    """
 
-#     # get names of heat pumps in previous iteration that cannot be replaced by direct utilisation in this iteration
-#     heat_pump_idx_previous_iteration = n_p.links.index[
-#         n_p.links.index.str.contains("heat pump")
-#         & n_p.links.index.str[:-4].isin(
-#             n.links_t.efficiency.columns.str.rstrip(  # sources that can be directly used are no longer represented by heat pumps in the dynamic efficiency dataframe
-#                 str(year)
-#             )
-#         )
-#     ]
-#     # construct names of same-technology heat pumps in the current iteration
-#     corresponding_idx_this_iteration = heat_pump_idx_previous_iteration.str[:-4] + str(
-#         year
-#     )
-#     # update efficiency of heat pumps in previous iteration in-place to efficiency in this iteration
-#     n_p.links_t["efficiency"].loc[:, heat_pump_idx_previous_iteration] = (
-#         n.links_t["efficiency"].loc[:, corresponding_idx_this_iteration].values
-#     )
+    # get names of heat pumps in previous iteration that cannot be replaced by direct utilisation in this iteration
+    heat_pump_idx_previous_iteration = n_p.links.index[
+        n_p.links.index.str.contains("heat pump")
+        & n_p.links.index.str[:-4].isin(
+            n.links_t.efficiency.columns.str.rstrip(  # sources that can be directly used are no longer represented by heat pumps in the dynamic efficiency dataframe
+                str(year)
+            )
+        )
+    ]
+    # construct names of same-technology heat pumps in the current iteration
+    corresponding_idx_this_iteration = heat_pump_idx_previous_iteration.str[:-4] + str(
+        year
+    )
+    # update efficiency of heat pumps in previous iteration in-place to efficiency in this iteration
+    n_p.links_t["efficiency"].loc[:, heat_pump_idx_previous_iteration] = (
+        n.links_t["efficiency"].loc[:, corresponding_idx_this_iteration].values
+    )
 
-#     # Change efficiency2 for heat pumps that use an explicitly modelled heat source
-#     previous_iteration_columns = heat_pump_idx_previous_iteration.intersection(
-#         n_p.links_t["efficiency2"].columns
-#     )
-#     current_iteration_columns = corresponding_idx_this_iteration.intersection(
-#         n.links_t["efficiency2"].columns
-#     )
-#     n_p.links_t["efficiency2"].loc[:, previous_iteration_columns] = (
-#         n.links_t["efficiency2"].loc[:, current_iteration_columns].values
-#     )
+    # Change efficiency2 for heat pumps that use an explicitly modelled heat source
+    previous_iteration_columns = heat_pump_idx_previous_iteration.intersection(
+        n_p.links_t["efficiency2"].columns
+    )
+    current_iteration_columns = corresponding_idx_this_iteration.intersection(
+        n.links_t["efficiency2"].columns
+    )
+    n_p.links_t["efficiency2"].loc[:, previous_iteration_columns] = (
+        n.links_t["efficiency2"].loc[:, current_iteration_columns].values
+    )
 
 
-# def update_dynamic_ptes_capacity(
-#     n: pypsa.Network, n_p: pypsa.Network, year: int
-# ) -> None:
-#     """
-#     Updates dynamic pit storage capacity based on district heating temperature changes.
+def update_dynamic_ptes_capacity(
+    n: pypsa.Network, n_p: pypsa.Network, year: int
+) -> None:
+    """
+    Updates dynamic pit storage capacity based on district heating temperature changes.
 
-#     Parameters
-#     ----------
-#     n : pypsa.Network
-#         Original network.
-#     n_p : pypsa.Network
-#         Network with updated parameters.
-#     year : int
-#         Target year for capacity update.
+    Parameters
+    ----------
+    n : pypsa.Network
+        Original network.
+    n_p : pypsa.Network
+        Network with updated parameters.
+    year : int
+        Target year for capacity update.
 
-#     Returns
-#     -------
-#     None
-#         Updates capacity in-place.
-#     """
-#     # pit storages in previous iteration
-#     dynamic_ptes_idx_previous_iteration = n_p.stores.index[
-#         n_p.stores.index.str.contains("water pits")
-#     ]
-#     # construct names of same-technology dynamic pit storage in the current iteration
-#     corresponding_idx_this_iteration = dynamic_ptes_idx_previous_iteration.str[
-#         :-4
-#     ] + str(year)
-#     # update pit storage capacity in previous iteration in-place to capacity in this iteration
-#     n_p.stores_t.e_max_pu[dynamic_ptes_idx_previous_iteration] = n.stores_t.e_max_pu[
-#         corresponding_idx_this_iteration
-#     ].values
+    Returns
+    -------
+    None
+        Updates capacity in-place.
+    """
+    # pit storages in previous iteration
+    dynamic_ptes_idx_previous_iteration = n_p.stores.index[
+        n_p.stores.index.str.contains("water pits")
+    ]
+    # construct names of same-technology dynamic pit storage in the current iteration
+    corresponding_idx_this_iteration = dynamic_ptes_idx_previous_iteration.str[
+        :-4
+    ] + str(year)
+    # update pit storage capacity in previous iteration in-place to capacity in this iteration
+    n_p.stores_t.e_max_pu[dynamic_ptes_idx_previous_iteration] = n.stores_t.e_max_pu[
+        corresponding_idx_this_iteration
+    ].values
 
 
 if __name__ == "__main__":
@@ -372,10 +372,10 @@ if __name__ == "__main__":
 
     n_p = pypsa.Network(snakemake.input.network_p)
 
-    #update_heat_pump_efficiency(n, n_p, year)
+    update_heat_pump_efficiency(n, n_p, year)
 
-    #if snakemake.params.tes and snakemake.params.dynamic_ptes_capacity:
-    #    update_dynamic_ptes_capacity(n, n_p, year)
+    if snakemake.params.tes and snakemake.params.dynamic_ptes_capacity:
+        update_dynamic_ptes_capacity(n, n_p, year)
 
     add_brownfield(
         n,
