@@ -11,6 +11,12 @@ rule solve_multimodel_networks:
             **config["scenario"],
             run=config["run"]["name"],
         ),
+        expand(
+            RESULTS
+            + "networks/base_s_{clusters}_elec_{opts}_{planning_horizons}_MM.nc",
+            **config["scenario"],
+            run=config["run"]["name"],
+        ),
     message:
         "Collecting solved multi-model network files"
 
