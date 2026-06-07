@@ -12,7 +12,7 @@ Description
 """
 
 import logging
-from functools import reduce
+#from functools import reduce
 
 import geopandas as gpd
 import numpy as np
@@ -24,66 +24,55 @@ import pypsa
 #from scipy.sparse.csgraph import connected_components, dijkstra
 
 from scripts._helpers import configure_logging, set_scenario_config
-from scripts.cluster_network import busmap_for_admin_regions, cluster_regions
+#from scripts.cluster_network import busmap_for_admin_regions, cluster_regions
 
 logger = logging.getLogger(__name__)
 
-# ensure, that the dict for aggregation methods is not too long or too short
-def build_aggregation_dict(input_data, custom_methods):
-    mapping_dict = dict()
 
-    # build dictionary: for every column select custom_method or if not available select standard (mean or first depending on datatype)
-    for column in input_data.columns:
-        dtype = input_data[column].dtype
+def aggregate_lines_and_links(self, mapping_dict):
+    component_list =  []
+    for df_component in [self.lines, self.links]:
+        # replace both connected buses according to mapping
+        df_component.loc[df_component.loc[:,"bus0"].str.contains("DE"),"bus0"] = df_component.loc[df_component.loc[:,"bus0"].str.contains("DE"),"bus0"].apply(lambda x: mapping_dict[x])
+        df_component.loc[df_component.loc[:,"bus1"].str.contains("DE"),"bus1"] = df_component.loc[df_component.loc[:,"bus1"].str.contains("DE"),"bus1"].apply(lambda x: mapping_dict[x])
+        # delete the lines within buses
+        df_component = df_component.loc[~(df_component.loc[:,"bus0"] == df_component.loc[:,"bus1"])]
+        component_list.append(df_component)
 
-        if column in custom_methods:
-            mapping_dict[column] = custom_methods[column]
-        else:
-            # If datatype of column is not a number (but object or string) then use "first" method
-            if not is_numeric_dtype(dtype):
-                mapping_dict[column] = "first"
-            else:
-                mapping_dict[column] = "mean"
+    connections = pd.concat([component_list[0].loc[:,["bus0", "bus1", "s_nom"]], component_list[1].loc[:,["bus0", "bus1", "p_nom"]]])
 
-    return mapping_dict
+    # find identical pairings and the sum of capacities
+    connections["capacity"] = connections["p_nom"].fillna(connections["s_nom"])
+    connections["pairing"] = connections.apply(lambda row: "_".join(sorted([row["bus0"], row["bus1"]])), axis=1)
+    pairings_unique = connections["pairing"].unique()
 
+    # delete old lines and old links
+    self.lines.drop(labels=self.lines.index, inplace=True)
+    self.links.drop(labels=self.links.index, inplace=True)
 
-def aggregate_lines_or_links(df_components, mapping_dict, custom_aggregation_methods=dict(), groupby_column="pairing"):
-    # replace both connected buses according to mapping
-    df_components.loc[df_components.loc[:,"bus0"].str.contains("DE"),"bus0"] = df_components.loc[df_components.loc[:,"bus0"].str.contains("DE"),"bus0"].apply(lambda x: mapping_dict[x])
-    df_components.loc[df_components.loc[:,"bus1"].str.contains("DE"),"bus1"] = df_components.loc[df_components.loc[:,"bus1"].str.contains("DE"),"bus1"].apply(lambda x: mapping_dict[x])
-
-    # delete the lines within buses
-    df_components.loc[:,"same_bus"] = df_components.loc[:,"bus0"] == df_components.loc[:,"bus1"]
-    df_components = df_components.loc[~df_components.loc[:,"same_bus"]]
-    df_components = df_components.drop(columns=["same_bus"])
-
-    # add a helper column with the bus names in alphabetical order (to find identical pairings)
-    df_components["pairing"] = df_components.apply(lambda row: "_".join(sorted([row["bus0"], row["bus1"]])), axis=1)
-
-    # aggregate the lines where "pairing" is the same and apply different aggregation methods per column
-    aggregation_methods = build_aggregation_dict(df_components, custom_aggregation_methods)
-    df_components = df_components.groupby(groupby_column).agg(aggregation_methods)
-    df_components = df_components.drop(columns=["pairing"])
-
-    # convert multiindex into one
-    if isinstance(df_components.index, pd.MultiIndex):
-        df_components.index = df_components.index.map(lambda x: "_".join(map(str, x)))
-    else:
-        # Falls es nur ein einfacher Index ist, einfach als String belassen
-        df_components.index = df_components.index.astype(str)
-
-    df_components.index.name = "name"
-    return df_components
+    # create for every pairing a new NTC link with the aggregated capacity (if capacity is not zero)
+    for pairing in pairings_unique:
+        capacity = connections.loc[connections["pairing"] == pairing, "capacity"].sum()
+        bus0 = connections.loc[connections["pairing"] == pairing, "bus0"].iloc[0]
+        bus1 = connections.loc[connections["pairing"] == pairing, "bus1"].iloc[0]
+        if capacity != 0:
+            self.add("Link",
+                    "bidirectional-NTC-link" + pairing,
+                     bus0=bus0,
+                     bus1=bus1,
+                     p_nom=capacity,
+                     efficiency=1,
+                     marginal_cost=0,
+                     p_min_pu=-1)
 
 # move components to new buses (only generators, loads and StorageUnits)
-def transfer_components(compontent_df, mapping_dict):
+def transfer_components(df_components, mapping_dict):
     # connect the battery buses to the corresponding bidding zone
-    components_DE = compontent_df.loc[(compontent_df.index.str.contains("DE"))].index.tolist()
+    components_DE = df_components.loc[(df_components.index.str.contains("DE"))].index.tolist()
     for component in components_DE:
-        compontent_df.loc[component,"bus"] = mapping_dict[compontent_df.loc[component,"bus"]]
+        df_components.loc[component,"bus"] = mapping_dict[df_components.loc[component,"bus"]]
     
-    return compontent_df
+    return df_components
 
 # optional TODO: work with the dataframe instead of .remove and .add just like in lines/links
 # TODO: control (str or SeriesLike[str]) – P,Q,V control strategy for power flow, must be "PQ", "PV" or "Slack". 
@@ -135,80 +124,17 @@ if __name__ == "__main__":
 
     # aggregate the buses per bidding zone (only in DE)
     MM_net = aggregate_buses(MM_net, mapping_dict, bz_shapes_DE)
-
     # for every generator in DE: replace connecting bus with new bz-bus according to mapping dictionary
     MM_net.generators = transfer_components(MM_net.generators, mapping_dict)
-
     # for every load in DE: replace connecting bus with new bz-bus according to mapping dictionary, TODO: Maybe aggregate loads per bus?
     MM_net.loads = transfer_components(MM_net.loads, mapping_dict)
-
     # for every StorageUnit in DE: replace connecting bus with new bz-bus according to mapping dictionary
     MM_net.storage_units = transfer_components(MM_net.storage_units, mapping_dict)
-
     # stores doesn't have to be transfered because they are attached to the battery buses (and these are already transfered)
     # sub_networks doesn't have to be transfered, because there are none in DE
 
-    lines_aggregation_methods = {"bus0": "first",
-                                "bus1": "first",
-                                "type": "first",
-                                "s_nom": "sum",
-                                "s_nom_extendable": "first",    # should be: If one True, then True
-                                "s_nom_max": "sum",
-                                "s_nom_min": "sum",
-                                "s_nom_set": "first",           # Is later set at optimization
-                                "active": "first",
-                                "build_year": "min",            # doesn't matter here
-                                "lifetime": "max",              # doesn't matter here
-                                "length": "sum",
-                                "carrier": "first",
-                                "num_parallel": "sum",
-                                "v_ang_min": "first",           # not used currently
-                                "v_ang_max": "first",           # not used currently
-                                "sub_network": "first",         # technically shouldn't set by hand
-                                "dc": "first",
-                                "pairing": "first"}
-
-    links_aggregation_methods = {"bus0": "first",
-                        "bus1": "first",
-                        "type": "first",
-                        'carrier': "first",
-                        'active': "first",
-                        'build_year': "min",
-                        'lifetime': "max", 
-                        'p_nom': "sum",  
-                        'p_nom_extendable': "first", 
-                        'p_nom_min': "sum",
-                        'p_nom_max': "sum", 
-                        'p_nom_set': "sum", 
-                        'p_set': "sum", 
-                        'p_init': "sum", 
-                        'length': "sum",
-                        'committable': "first", 
-                        'cyclic_delay': "first", 
-                        'voltage': "max",
-                        'underground': "first", 
-                        'under_construction': "first", 
-                        'tags': "first", 
-                        'geometry': "first", 
-                        'dc': "first",
-                        'project_status': "first",
-                        "pairing": "first"}
-
-    # set the extendability of lines correctly by locking their optimization range 
-    extendable_lines = MM_net.lines[MM_net.lines.s_nom_extendable].index
-    MM_net.lines.loc[extendable_lines, "s_nom_min"] = MM_net.lines.loc[extendable_lines, "s_nom"]
-    MM_net.lines.loc[extendable_lines, "s_nom_max"] = MM_net.lines.loc[extendable_lines, "s_nom"]
-
-    # set the extendability of links correctly by locking their optimization range 
-    extendable_links = MM_net.links[MM_net.links.p_nom_extendable].index
-    MM_net.links.loc[extendable_links, "p_nom_min"] = MM_net.links.loc[extendable_links, "p_nom"]
-    MM_net.links.loc[extendable_links, "p_nom_max"] = MM_net.links.loc[extendable_links, "p_nom"]
-    MM_net.links.loc[extendable_links, "p_nom_set"] = MM_net.links.loc[extendable_links, "p_nom"]
-
-
-    # for every line/link in DE: aggregate capacity
-    MM_net.lines = aggregate_lines_or_links(MM_net.lines, mapping_dict, lines_aggregation_methods)
-    MM_net.links = aggregate_lines_or_links(MM_net.links, mapping_dict, links_aggregation_methods, ["pairing", "carrier"])
+    # aggregate capacity of lines and links and create NTC connections
+    aggregate_lines_and_links(MM_net, mapping_dict)
 
     MM_net.export_to_netcdf(snakemake.output.MM_network)
 
