@@ -13,7 +13,7 @@ https://docs.pypsa.org/latest/examples/scigrid-redispatch/#load-example-network
 """
 
 import logging
-from functools import reduce
+#from functools import reduce
 
 #import geopandas as gpd
 #import numpy as np
@@ -24,7 +24,7 @@ import pypsa
 #from scipy.sparse.csgraph import connected_components, dijkstra
 
 from scripts._helpers import configure_logging, set_scenario_config
-from scripts.cluster_network import busmap_for_admin_regions, cluster_regions
+#from scripts.cluster_network import busmap_for_admin_regions, cluster_regions
 
 logger = logging.getLogger(__name__)
 

@@ -25,10 +25,9 @@ from scripts.add_existing_baseyear import add_build_year_to_new_assets
 logger = logging.getLogger(__name__)
 idx = pd.IndexSlice
 
-def remove_redispatch_generators(n):
-    redispatch_generators = n.generators[(n.generators.index.str.contains("ramp up") | n.generators.index.str.contains("ramp down"))].index
-    n.remove("Generator", redispatch_generators)
-    return n
+def remove_redispatch_generators(self):
+    redispatch_generators = self.generators[(self.generators.index.str.contains("ramp up") | self.generators.index.str.contains("ramp down"))].index
+    self.remove("Generator", redispatch_generators)
 
 def add_brownfield(
     n,
@@ -217,7 +216,7 @@ if __name__ == "__main__":
         capacity_threshold=snakemake.params.threshold_capacity,
     )
 
-    n = remove_redispatch_generators(n)
+    remove_redispatch_generators(n)
 
     disable_grid_expansion_if_limit_hit(n)
 

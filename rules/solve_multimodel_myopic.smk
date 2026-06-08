@@ -150,7 +150,7 @@ rule add_brownfield_multimodel:
     message:
         "Adding brownfield constraints for existing infrastructure for {wildcards.clusters} clusters, {wildcards.planning_horizons} planning horizons, {wildcards.opts} electric options"
     script:
-        scripts("add_brownfield.py")
+        scripts("add_brownfield_multimodel.py")
 
 
 
