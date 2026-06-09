@@ -483,7 +483,7 @@ if __name__ == "__main__":
     n.meta = dict(snakemake.config, **dict(wildcards=dict(snakemake.wildcards)))
 
     # convert lines that are outside of DE or cross-border to links with NTC values
-    convert_nonDE_lines_to_NTC(n)
+    # convert_nonDE_lines_to_NTC(n)
 
     sanitize_custom_columns(n)
     sanitize_carriers(n, snakemake.config)
