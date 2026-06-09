@@ -201,7 +201,7 @@ rule solve_network_multimodel:
         ),
         custom_extra_functionality=input_custom_extra_functionality,
     message:
-        "Solving electricity network optimization {model_type}_{planning_horizons} for {wildcards.clusters} clusters and {wildcards.opts} electric options"
+        "Solving electricity network optimization {wildcards.model_type}_{wildcards.planning_horizons} for {wildcards.clusters} clusters and {wildcards.opts} electric options"
     script:
         scripts("solve_network.py")
 
