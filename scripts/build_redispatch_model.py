@@ -50,18 +50,26 @@ def add_dispatch(net_in, net_out):
 
     return net_out
 
-def add_redispatch_capacity(net_in, net_out):
+def add_redispatch_capacity(net_in, net_out, only_DE=True):
     # create list of new (fictional) generators (for each generator: one for ramping up, one for ramping down)
-    g_up = net_out.generators.copy()
-    g_down = net_out.generators.copy()
+    if only_DE:
+        g_up = RM_net_with_dispatch.generators[RM_net_with_dispatch.generators.bus.str.startswith("DE")].copy()
+        g_down = RM_net_with_dispatch.generators[RM_net_with_dispatch.generators.bus.str.startswith("DE")].copy()
+    else:
+        g_up = net_out.generators.copy()
+        g_down = net_out.generators.copy()
 
     # name new generators
     g_up.index = g_up.index.map(lambda x: x + " ramp up")
     g_down.index = g_down.index.map(lambda x: x + " ramp down")
 
     # get the capacity that the generators can ramp up/down
-    up_capacity = (net_in.get_switchable_as_dense("Generator", "p_max_pu") * net_in.generators.p_nom - net_in.generators_t.p).clip(0) / net_in.generators.p_nom
-    down_capacity = -net_in.generators_t.p / net_in.generators.p_nom
+    if only_DE:
+        up_capacity = (net_in.get_switchable_as_dense("Generator", "p_max_pu").loc[:,net_in.generators_t.p.columns.str.startswith("DE")] * net_in.generators[net_in.generators.bus.str.startswith("DE")].p_nom - net_in.generators_t.p.loc[:,net_in.generators_t.p.columns.str.startswith("DE")]).clip(0) / net_in.generators[net_in.generators.bus.str.startswith("DE")].p_nom
+        down_capacity = -net_in.generators_t.p.loc[:,net_in.generators_t.p.columns.str.startswith("DE")] / net_in.generators[net_in.generators.bus.str.startswith("DE")].p_nom    
+    else:
+        up_capacity = (net_in.get_switchable_as_dense("Generator", "p_max_pu") * net_in.generators.p_nom - net_in.generators_t.p).clip(0) / net_in.generators.p_nom
+        down_capacity = -net_in.generators_t.p / net_in.generators.p_nom
 
     # ?
     up_capacity.columns = up_capacity.columns.map(lambda x: x + " ramp up")
