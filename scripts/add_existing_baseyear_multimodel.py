@@ -397,6 +397,42 @@ def add_power_capacities_installed_before_baseyear(
                 existing_large, "p_nom_min"
             ]
 
+def convert_nonDE_lines_to_NTC(self):
+
+    # get lines that are outside of DE or cross-border
+    lines_outside_DE = self.lines[~self.lines.bus0.str.startswith("DE") | ~self.lines.bus1.str.startswith("DE")]
+
+    links_new = pd.DataFrame()
+    # copy over relevant parameters and rename columns
+    links_new = lines_outside_DE[[
+        "bus0",
+        "bus1",
+        "s_nom",
+        "s_nom_extendable",
+        "s_nom_min",
+        "s_nom_max",
+        "capital_cost",
+        "fom_cost",
+        "active",
+        "build_year",
+        "lifetime",
+        "length",
+        "terrain_factor",
+        "v_nom",
+    ]].rename(columns={
+        "s_nom": "p_nom",
+        "s_nom_extendable": "p_nom_extendable",
+        "s_nom_min": "p_nom_min",
+        "s_nom_max": "p_nom_max",
+        "v_nom": "voltage",
+    })
+
+    links_new.index = lines_outside_DE.index
+    links_new.index = links_new.index.map(lambda x: x + " (link)")
+
+    # add new links to network and remove old lines
+    self.add("Link", links_new.index, **links_new, axis=1)
+    self.remove("Line", lines_outside_DE.index)
 
 if __name__ == "__main__":
     if "snakemake" not in globals():
@@ -445,6 +481,9 @@ if __name__ == "__main__":
     )
 
     n.meta = dict(snakemake.config, **dict(wildcards=dict(snakemake.wildcards)))
+
+    # convert lines that are outside of DE or cross-border to links with NTC values
+    convert_nonDE_lines_to_NTC(n)
 
     sanitize_custom_columns(n)
     sanitize_carriers(n, snakemake.config)
