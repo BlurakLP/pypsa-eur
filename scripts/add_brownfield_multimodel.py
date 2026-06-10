@@ -20,7 +20,7 @@ from scripts._helpers import (
     update_config_from_wildcards,
 )
 from scripts.add_electricity import flatten, sanitize_carriers
-from scripts.add_existing_baseyear import add_build_year_to_new_assets, scale_load
+from scripts.add_existing_baseyear_multimodel import add_build_year_to_new_assets, scale_load
 
 logger = logging.getLogger(__name__)
 idx = pd.IndexSlice
