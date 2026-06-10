@@ -20,7 +20,7 @@ from scripts._helpers import (
     update_config_from_wildcards,
 )
 from scripts.add_electricity import flatten, sanitize_carriers
-from scripts.add_existing_baseyear import add_build_year_to_new_assets
+from scripts.add_existing_baseyear import add_build_year_to_new_assets, scale_load
 
 logger = logging.getLogger(__name__)
 idx = pd.IndexSlice
@@ -221,6 +221,9 @@ if __name__ == "__main__":
     disable_grid_expansion_if_limit_hit(n)
 
     n.meta = dict(snakemake.config, **dict(wildcards=dict(snakemake.wildcards)))
+
+    n.loads_t = scale_load(n.loads_t, snakemake.config["scenario"]["load_forecast_DE"][str(year)])
+
 
     sanitize_custom_columns(n)
     sanitize_carriers(n, snakemake.config)

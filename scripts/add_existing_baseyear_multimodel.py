@@ -397,6 +397,7 @@ def add_power_capacities_installed_before_baseyear(
                 existing_large, "p_nom_min"
             ]
 
+# right now not needed because it could lead to inconsistencies
 def convert_nonDE_lines_to_NTC(self):
 
     # get lines that are outside of DE or cross-border
@@ -433,6 +434,16 @@ def convert_nonDE_lines_to_NTC(self):
     # add new links to network and remove old lines
     self.add("Link", links_new.index, **links_new, axis=1)
     self.remove("Line", lines_outside_DE.index)
+
+def scale_load(loads_t: pd.DataFrame, load_DE_forecast: float) -> pd.DataFrame:
+    # get the sum of the electric load in DE
+    load_sum_countries = loads_t["p_set"].sum()
+    load_sum_DE = load_sum_countries.loc[load_sum_countries.index.str.startswith("DE")].sum()
+    # calculate the scaling factor to match the DE load forecast
+    load_forecast_factor = load_DE_forecast / load_sum_DE
+    # scale the load in all countries by the same factor to keep the relative distribution
+    new_loads_t = loads_t["p_set"] * load_forecast_factor
+    return new_loads_t
 
 if __name__ == "__main__":
     if "snakemake" not in globals():
@@ -484,6 +495,8 @@ if __name__ == "__main__":
 
     # convert lines that are outside of DE or cross-border to links with NTC values
     # convert_nonDE_lines_to_NTC(n)
+
+    n.loads_t = scale_load(n.loads_t, snakemake.config["scenario"]["load_forecast_DE"]["2030"])
 
     sanitize_custom_columns(n)
     sanitize_carriers(n, snakemake.config)
