@@ -496,7 +496,7 @@ if __name__ == "__main__":
     # convert lines that are outside of DE or cross-border to links with NTC values
     # convert_nonDE_lines_to_NTC(n)
 
-    n.loads_t = scale_load(n.loads_t, snakemake.config["scenario"]["load_forecast_DE"]["2030"])
+    n.loads_t = scale_load(n.loads_t, snakemake.config["load_forecast_DE"]["load_2030"])
 
     sanitize_custom_columns(n)
     sanitize_carriers(n, snakemake.config)

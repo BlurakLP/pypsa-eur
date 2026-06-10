@@ -222,7 +222,7 @@ if __name__ == "__main__":
 
     n.meta = dict(snakemake.config, **dict(wildcards=dict(snakemake.wildcards)))
 
-    n.loads_t = scale_load(n.loads_t, snakemake.config["scenario"]["load_forecast_DE"][str(year)])
+    n.loads_t = scale_load(n.loads_t, snakemake.config["load_forecast_DE"]["load_" + str(year)])
 
 
     sanitize_custom_columns(n)
