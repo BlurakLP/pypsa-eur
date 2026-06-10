@@ -81,13 +81,14 @@ if config["foresight"] == "overnight":
 
     include: "rules/solve_overnight.smk"
 
+if config["multimodel"]:
+    include: "rules/solve_multimodel_myopic.smk"
 
 if config["foresight"] == "myopic":
 
-    if config["multimodel"]:
-        include: "rules/solve_multimodel_myopic.smk"
-    else:
+    if not config["multimodel"]:
         include: "rules/solve_myopic.smk"
+        
 
 
 if config["foresight"] == "perfect":
