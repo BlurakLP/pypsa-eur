@@ -19,6 +19,7 @@ import logging
 #import numpy as np
 import pandas as pd
 import pypsa
+import numpy as np
 #import scipy as sp
 #from pypsa.clustering.spatial import busmap_by_stubs, get_clustering_from_busmap
 #from scipy.sparse.csgraph import connected_components, dijkstra
@@ -50,6 +51,17 @@ def add_dispatch(net_in, net_out):
 
     return net_out
 
+def get_invalid_entries(df, label):
+    invalid_num = len(df.loc[:, (np.isinf(df) | np.isnan(df)).any()])
+    print(f"{invalid_num} nan or inf values detected in {label} time series of generators.")
+    return invalid_num
+
+def replace_invalid_entries(df):
+    df.replace([-np.inf], -1, inplace=True)
+    df.replace([np.inf], 1, inplace=True)
+    df.fillna(1, inplace=True)
+    return df
+
 def add_redispatch_capacity(net_in, net_out):
     # create list of new (fictional) generators (for each generator: one for ramping up, one for ramping down)
     g_up = net_out.generators.copy()
@@ -68,8 +80,12 @@ def add_redispatch_capacity(net_in, net_out):
     down_capacity.columns = down_capacity.columns.map(lambda x: x + " ramp down")
 
     # add the ramp-up/-down generators to the redispatch model network
-    net_out.add("Generator", g_up.index, p_max_pu=up_capacity, **g_up.drop("p_max_pu", axis=1))
-    net_out.add("Generator", g_down.index, p_min_pu=down_capacity, p_max_pu=0, **g_down.drop(["p_max_pu", "p_min_pu"], axis=1));
+    net_out.add("Generator", g_up.index, p_min_pu = 0, p_max_pu=up_capacity, p_nom_extendable=False **g_up.drop(["p_min_pu", "p_max_pu", "p_nom_extendable"], axis=1))
+    net_out.add("Generator", g_down.index, p_min_pu=down_capacity, p_max_pu=0, p_nom_extendable=False, **g_down.drop(["p_max_pu", "p_min_pu", "p_nom_extendable"], axis=1));
+    
+    if (get_invalid_entries(net_out.generators_t["p_min_pu"], "p_min_pu") != 0 | get_invalid_entries(net_out.generators_t["p_max_pu"], "p_min_pu") != 0):
+        net_out.generators_t["p_min_pu"] = replace_invalid_entries(net_out.generators_t["p_min_pu"])
+        net_out.generators_t["p_max_pu"] = replace_invalid_entries(net_out.generators_t["p_max_pu"])
 
     return net_out
 
