@@ -80,7 +80,7 @@ def add_redispatch_capacity(net_in, net_out):
     down_capacity.columns = down_capacity.columns.map(lambda x: x + " ramp down")
 
     # add the ramp-up/-down generators to the redispatch model network
-    net_out.add("Generator", g_up.index, p_min_pu = 0, p_max_pu=up_capacity, p_nom_extendable=False **g_up.drop(["p_min_pu", "p_max_pu", "p_nom_extendable"], axis=1))
+    net_out.add("Generator", g_up.index, p_min_pu = 0, p_max_pu=up_capacity, p_nom_extendable=False, **g_up.drop(["p_min_pu", "p_max_pu", "p_nom_extendable"], axis=1))
     net_out.add("Generator", g_down.index, p_min_pu=down_capacity, p_max_pu=0, p_nom_extendable=False, **g_down.drop(["p_max_pu", "p_min_pu", "p_nom_extendable"], axis=1));
     
     if (get_invalid_entries(net_out.generators_t["p_min_pu"], "p_min_pu") != 0 | get_invalid_entries(net_out.generators_t["p_max_pu"], "p_min_pu") != 0):
