@@ -53,7 +53,7 @@ def add_dispatch(net_in, net_out):
 
 def get_invalid_entries(df, label):
     invalid_num = len(df.loc[:, (np.isinf(df) | np.isnan(df)).any()])
-    print(f"{invalid_num} nan or inf values detected in {label} time series of generators.")
+    logger.info(f"{invalid_num} nan or inf values detected in {label} time series of generators.\n")
     return invalid_num
 
 def replace_invalid_entries(df):
@@ -82,10 +82,6 @@ def add_redispatch_capacity(net_in, net_out):
     # add the ramp-up/-down generators to the redispatch model network
     net_out.add("Generator", g_up.index, p_min_pu = 0, p_max_pu=up_capacity, p_nom_extendable=False, **g_up.drop(["p_min_pu", "p_max_pu", "p_nom_extendable"], axis=1))
     net_out.add("Generator", g_down.index, p_min_pu=down_capacity, p_max_pu=0, p_nom_extendable=False, **g_down.drop(["p_max_pu", "p_min_pu", "p_nom_extendable"], axis=1));
-    
-    if (get_invalid_entries(net_out.generators_t["p_min_pu"], "p_min_pu") != 0 | get_invalid_entries(net_out.generators_t["p_max_pu"], "p_min_pu") != 0):
-        net_out.generators_t["p_min_pu"] = replace_invalid_entries(net_out.generators_t["p_min_pu"])
-        net_out.generators_t["p_max_pu"] = replace_invalid_entries(net_out.generators_t["p_max_pu"])
 
     return net_out
 
@@ -107,6 +103,8 @@ def transfer_bus_allocation(components_from, components_to):
     
     return components_to
 
+def remove_empty_generators(self):
+    self.remove("Generator", self.generators.loc[(self.generators["p_nom"] == 0) & (self.generators["p_nom_min"] == 0) & (self.generators["p_nom_max"] == 0),:].index)
 
 if __name__ == "__main__":
     if "snakemake" not in globals():
@@ -143,8 +141,18 @@ if __name__ == "__main__":
     # add redispatch capacities
     RM_net_prepared = add_redispatch_capacity(MM_net, RM_net_with_dispatch)
 
+    get_invalid_entries(RM_net_prepared.generators_t["p_min_pu"], "p_min_pu")
+    get_invalid_entries(RM_net_prepared.generators_t["p_max_pu"], "p_min_pu")
+
+    # remove invalid values in time series
+    RM_net_prepared.generators_t["p_min_pu"] = replace_invalid_entries(RM_net_prepared.generators_t["p_min_pu"])
+    RM_net_prepared.generators_t["p_max_pu"] = replace_invalid_entries(RM_net_prepared.generators_t["p_max_pu"])
+
+    # remove generators with no capacity and no expansion capacity
+    #remove_empty_generators(RM_net_prepared)
+
     RM_net_prepared.export_to_netcdf(snakemake.output.network)
 
     logger.info(
-        f"Added dispatch to the network\n"
+        f"Added dispatch to the network, fixed capacity and added redispatch generators.\n"
     )
